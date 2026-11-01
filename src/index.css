@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background-color: #0C0E14;
+    color: #F3F4F6;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Glassmorphism helpers */
+.glass-panel {
+  background: rgba(22, 26, 36, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-pill {
+  background: rgba(34, 39, 54, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-card-glow {
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+/* Custom soundwave animation */
+@keyframes barBounce {
+  0%, 100% {
+    height: 6px;
+  }
+  50% {
+    height: 28px;
+  }
+}
+
+.animate-bar-1 { animation: barBounce 1.1s ease-in-out infinite; }
+.animate-bar-2 { animation: barBounce 0.8s ease-in-out infinite 0.2s; }
+.animate-bar-3 { animation: barBounce 1.3s ease-in-out infinite 0.1s; }
+.animate-bar-4 { animation: barBounce 0.9s ease-in-out infinite 0.3s; }
+.animate-bar-5 { animation: barBounce 1.2s ease-in-out infinite 0.15s; }
+

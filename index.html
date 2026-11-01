@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="uz" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='48' fill='%23D2FF3A'/><path d='M35 50 Q50 25 65 50 Q50 75 35 50' fill='%230C0E14'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0C0E14" />
+    <title>SuhbatDosh AI — Real Vaqtli Suhbat Prompteri</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* Mobile safe area & smooth scrolling */
+      html, body {
+        background-color: #0C0E14;
+        color: #F3F4F6;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: none;
+        height: 100%;
+        overflow-x: hidden;
+      }
+      /* Prevent bounce on iOS */
+      #root {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      /* Custom scrollbars */
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #222736;
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #32394D;
+      }
+    </style>
+  </head>
+  <body class="bg-dark-900 text-gray-100 font-sans antialiased selection:bg-brand-lime selection:text-black">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
+
