@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Sparkles, Send, Laugh, RotateCcw, Zap, Key, X, Check } from 'lucide-react';
+import { Mic, MicOff, Sparkles, Send, Laugh, RotateCcw, Zap, Key, X, Check, Globe, MessageSquareQuote, PenTool } from 'lucide-react';
 import { SpeechService } from './services/speechService';
 import { generateMultilingualResponse } from './services/multilingualBrain.js';
 import { generateGeminiSuperResponse } from './services/geminiService.js';
 import { dialogueMemory } from './services/dialogueMemory.js';
 import { toPhonetic } from './services/conversationEngine.js';
+import { translateUserSpeech, TARGET_LANGUAGES } from './services/translatorService.js';
 
 // Faqat parametr tokenlarini ajratib chiroyli ko'rsatish
 function renderHighlightedText(text, isUzbek = false) {
@@ -39,6 +40,11 @@ export default function App() {
   const [audioLevel, setAudioLevel] = useState(0);
   const [interimText, setInterimText] = useState('');
   
+  // Faol til (O'zbek, Rus, Ingliz, Turk)
+  const [activeSpeechLang, setActiveSpeechLang] = useState('ru');
+  const [translationTargetLang, setTranslationTargetLang] = useState('ru');
+  const [inputMode, setInputMode] = useState('user'); // 'user' (Javobingizni yozing / tarjima) yoki 'partner' (Suhbatdosh gapi)
+
   // Gemini AI kaliti (localStorage'dan olinadi)
   const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
   const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
@@ -51,7 +57,7 @@ export default function App() {
   const [isJokeActive, setIsJokeActive] = useState(false);
   const [stepCount, setStepCount] = useState(1);
   
-  // Yozib sinash qatori (ekranda doim turadi)
+  // Yozib kiritish qatori
   const [manualInput, setManualInput] = useState('');
 
   // AI tahlil natijasi (Ko'p tilli va xotirali intellekt)
@@ -61,6 +67,15 @@ export default function App() {
   });
 
   const speechServiceRef = useRef(null);
+
+  // Nutq tili o'zgarganda
+  const handleSpeechLangChange = (code) => {
+    setActiveSpeechLang(code);
+    const langObj = TARGET_LANGUAGES.find(l => l.code === code);
+    if (speechServiceRef.current && langObj) {
+      speechServiceRef.current.setLanguage(langObj.speechCode);
+    }
+  };
 
   // AI javobini olish (Gemini agar kalit bo'lsa, aks holda tezkor Mahalliy Ong)
   const computeResponse = async (text, vIndex, jokeMode) => {
@@ -167,12 +182,12 @@ export default function App() {
       localStorage.removeItem('gemini_api_key');
     }
     setIsApiKeyModalOpen(false);
-    // Hozirgi gapni qayta tahlil qilish
     updateAiResponse(partnerSpeech, variantIndex, isJokeActive);
   };
 
   // Web Speech xizmati
   useEffect(() => {
+    const langObj = TARGET_LANGUAGES.find(l => l.code === activeSpeechLang);
     speechServiceRef.current = new SpeechService({
       onTranscript: (finalTranscript, interim) => {
         if (interim) setInterimText(interim);
@@ -185,12 +200,16 @@ export default function App() {
       onAudioLevel: (level) => setAudioLevel(level)
     });
 
+    if (langObj) {
+      speechServiceRef.current.setLanguage(langObj.speechCode);
+    }
+
     return () => {
       if (speechServiceRef.current) {
         speechServiceRef.current.stop();
       }
     };
-  }, [isJokeActive, geminiApiKey]);
+  }, [isJokeActive, geminiApiKey, activeSpeechLang]);
 
   const toggleListening = () => {
     if (!speechServiceRef.current) return;
@@ -201,37 +220,82 @@ export default function App() {
     }
   };
 
-  const handleManualSubmit = (e) => {
+  // Foydalanuvchi yozgan gapni qabul qilish
+  const handleManualSubmit = async (e) => {
     e.preventDefault();
-    if (manualInput.trim()) {
-      handlePartnerSpoken(manualInput.trim());
-      setManualInput('');
+    if (!manualInput.trim()) return;
+
+    const textToProcess = manualInput.trim();
+    setManualInput('');
+
+    if (inputMode === 'user') {
+      // Foydalanuvchi o'z gapini yozdi -> Tanlangan tilga tarjima qilish!
+      setIsAiLoading(true);
+      const translated = await translateUserSpeech({
+        text: textToProcess,
+        targetLang: translationTargetLang,
+        apiKey: geminiApiKey
+      });
+      setIsAiLoading(false);
+
+      if (translated) {
+        setResult(translated);
+        dialogueMemory.addTurn('user', translated.userResponse, translated.userMeaning, translationTargetLang);
+        setStepCount(dialogueMemory.getStepCount());
+      }
+    } else {
+      // Suhbatdosh gapi deb qabul qilish
+      handlePartnerSpoken(textToProcess);
     }
   };
 
   return (
-    <div className="h-[100dvh] max-h-[100dvh] w-full bg-[#07090E] text-white flex flex-col justify-between selection:bg-brand-lime selection:text-black select-none overflow-hidden relative font-sans px-3 sm:px-4 py-1.5 sm:py-2">
+    <div className="h-[100dvh] max-h-[100dvh] w-full bg-[#07090E] text-white flex flex-col justify-between selection:bg-brand-lime selection:text-black select-none overflow-hidden relative font-sans px-3 sm:px-4 py-1.5 sm:py-2.5">
       
-      {/* 1. YUQORI BOSHQARUV: GEMINI + QADAM + YANGI SUHBAT + DOIMIY GAP */}
-      <div className="w-full max-w-md mx-auto shrink-0 pt-0.5 space-y-1">
+      {/* 1. YUQORI BOSHQARUV: TILLAR + GEMINI + QADAM + YANGI SUHBAT */}
+      <header className="w-full max-w-md mx-auto shrink-0 space-y-1">
         
-        {/* Yuqori panel: Qadam + Gemini holati + Yangi suhbat */}
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-bold text-gray-300">
-              Bosqich: <span className="text-brand-lime">{stepCount}-qadam</span>
+        {/* Yuqori panel: Qadam + Tillar + Gemini holati + Yangi suhbat */}
+        <div className="flex items-center justify-between gap-1 px-1">
+          
+          {/* Qadam va Til tanlash */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            <span className="text-[10px] sm:text-[11px] font-bold text-gray-300 shrink-0">
+              <span className="text-brand-lime font-mono">{stepCount}</span>-qadam
             </span>
+
+            {/* Suhbatdosh tili tanlash pills */}
+            <div className="flex items-center gap-1 bg-dark-800/90 p-0.5 rounded-xl border border-dark-700">
+              {TARGET_LANGUAGES.map((lang) => {
+                const isActive = activeSpeechLang === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => handleSpeechLangChange(lang.code)}
+                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                      isActive
+                        ? 'bg-brand-lime text-black shadow-sm font-black'
+                        : 'text-gray-400 hover:text-white hover:bg-dark-750'
+                    }`}
+                    title={`Suhbat tili: ${lang.name}`}
+                  >
+                    <span>{lang.flag}</span>
+                    <span className="uppercase text-[9px]">{lang.code}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* O'ng tomon: Gemini + Yangi suhbat */}
+          <div className="flex items-center gap-1 shrink-0">
             {/* Gemini tugmasi */}
             <button
               onClick={() => {
                 setTempApiKey(geminiApiKey);
                 setIsApiKeyModalOpen(true);
               }}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-xl border text-[10px] font-bold active:scale-95 transition-all shadow-sm ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-xl border text-[10px] font-bold active:scale-95 transition-all shadow-sm ${
                 geminiApiKey
                   ? 'bg-emerald-950/70 border-emerald-400/50 text-emerald-400'
                   : 'bg-dark-800 border-dark-700 text-gray-400 hover:text-white'
@@ -239,22 +303,22 @@ export default function App() {
               title="Gemini Super Intellekt (Cheksiz aql va baxsda yutish)"
             >
               <Zap className="w-3 h-3" />
-              <span>{geminiApiKey ? "Gemini Faol" : "Gemini ulash"}</span>
+              <span>{geminiApiKey ? "AI Faol" : "AI"}</span>
             </button>
 
             {/* Yangi suhbat tugmasi */}
             <button
               onClick={handleNewConversation}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[10px] font-bold active:scale-95 transition-all shadow-sm"
+              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[10px] font-bold active:scale-95 transition-all shadow-sm"
               title="Suhbat tarixini tozalash va yangi suhbat boshlash"
             >
               <RotateCcw className="w-3 h-3" />
-              <span>Yangi suhbat</span>
+              <span>Yangi</span>
             </button>
           </div>
         </div>
 
-        {/* ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Ekranda alohida turadi, umuman yo'qolmaydi) */}
+        {/* ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Doim ko'rinib turadi) */}
         <div className="w-full rounded-2xl bg-gradient-to-r from-dark-800 to-dark-850 border border-brand-lime/35 p-2 sm:p-2.5 shadow-md backdrop-blur-md">
           <div className="flex items-center justify-between text-[10px] text-brand-lime font-bold uppercase tracking-wider mb-0.5">
             <span className="flex items-center gap-1">
@@ -276,10 +340,10 @@ export default function App() {
           </div>
         </div>
 
-      </div>
+      </header>
 
-      {/* 2. JONLI TELEPROMPTER KARTASI (Ko'p tilli + Bahsda yutish, skrollsiz!) */}
-      <main className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center my-auto min-h-0 py-1">
+      {/* 2. JONLI TELEPROMPTER KARTASI (Ko'z ilg'aydigan, keng va qulay!) */}
+      <main className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center my-auto min-h-0 py-1 sm:py-2">
         
         <div className="w-full rounded-3xl bg-dark-850/95 border border-dark-700/90 p-3 sm:p-4 shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col justify-between relative overflow-hidden">
           
@@ -288,7 +352,7 @@ export default function App() {
             <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
               <span className="font-semibold text-gray-300 flex items-center gap-1">
                 <span>{result?.detectedLanguage?.flag || '🇷🇺'}</span>
-                <span>Suhbatdoshingiz ({result?.detectedLanguage?.name || 'Rus tili'}):</span>
+                <span>{result?.isUserSpeechMode ? "Siz yozgan gap:" : `Suhbatdoshingiz (${result?.detectedLanguage?.name || 'Rus tili'}):`}</span>
               </span>
               {isAiLoading ? (
                 <span className="text-emerald-400 text-[10px] font-mono animate-pulse">⚡ Gemini tahlil qilmoqda...</span>
@@ -307,12 +371,14 @@ export default function App() {
             </div>
           </div>
 
-          {/* B. SIZ AYTISHINGIZ KERAK BO'LGAN 100% ANIQ JAVOB VA RADDIYA */}
-          <div className="pt-1.5 flex-1 flex flex-col justify-center">
+          {/* B. SIZ AYTISHINGIZ KERAK BO'LGAN 100% ANIQ JAVOB / TARJIMA */}
+          <div className="pt-2 flex-1 flex flex-col justify-center">
             <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
               <span className="text-brand-lime font-bold uppercase tracking-wider flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5" />
-                {isJokeActive ? "Mavzuga mos Hazil / Qora yumor:" : "Siz ayting (100% Yutib chiqish):"}
+                {isJokeActive 
+                  ? "Mavzuga mos Hazil / Qora yumor:" 
+                  : (result?.isUserSpeechMode ? "Siz ayting (Tarjima qilingan):" : "Siz ayting (100% Aniq javob):")}
               </span>
               {result?.userNote && (
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-dark-750 text-gray-300 font-mono">
@@ -321,22 +387,22 @@ export default function App() {
               )}
             </div>
 
-            {/* Asosiy javob matni (Aniq javob yoki Baxsda mot qilish) */}
-            <div className="py-0.5">
-              <div className="text-base sm:text-xl font-extrabold text-white tracking-tight leading-snug">
+            {/* Asosiy javob matni (Aniq, katta, ko'z ilg'aydigan font) */}
+            <div className="py-1">
+              <div className="text-lg sm:text-2xl font-black text-white tracking-tight leading-snug">
                 {renderHighlightedText(result?.userResponse, false)}
               </div>
             </div>
 
             {/* Lotincha talaffuzi */}
             {result?.userPronunciation && (
-              <div className="text-[10px] sm:text-[11px] text-gray-400 font-mono truncate mt-0.5">
+              <div className="text-[11px] sm:text-xs text-gray-400 font-mono truncate mt-0.5">
                 {result.userPronunciation}
               </div>
             )}
 
             {/* O'zbekcha to'liq ma'nosi */}
-            <div className="mt-1.5 p-2 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 text-xs font-semibold text-brand-lime flex items-start gap-1.5">
+            <div className="mt-2 p-2.5 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 text-xs sm:text-sm font-semibold text-brand-lime flex items-start gap-1.5">
               <span className="shrink-0 font-bold">uz Ma’nosi:</span>
               <div className="text-white font-medium leading-tight">
                 {renderHighlightedText(result?.userMeaning, true)}
@@ -344,7 +410,7 @@ export default function App() {
             </div>
 
             {/* C. VARIANTLAR VA MAVZUGA MOS HAZILGA O'TISH */}
-            <div className="mt-2 pt-1 border-t border-dark-700/60 shrink-0">
+            <div className="mt-2.5 pt-1.5 border-t border-dark-700/60 shrink-0">
               
               {/* Variantlar tugmalari */}
               <div className="flex items-center gap-1.5 mb-1.5 overflow-x-auto no-scrollbar">
@@ -387,32 +453,90 @@ export default function App() {
 
       </main>
 
-      {/* 3. TEST YOZISH OYNCHASI (Ekranda doim turadi, istalgan tilda kiritish mumkin) */}
-      <div className="w-full max-w-md mx-auto shrink-0 pt-0.5 pb-1">
-        <form onSubmit={handleManualSubmit} className="flex items-center gap-1.5 bg-dark-800/95 border border-dark-700/90 rounded-2xl px-3 py-1.5 focus-within:border-brand-lime shadow-inner">
+      {/* 3. JAVOBINGIZNI YOZING (Tarjima qilish va tillarni tanlash imkoni bilan) */}
+      <section className="w-full max-w-md mx-auto shrink-0 pt-1 pb-1 space-y-1">
+        
+        {/* Tarjima tili va Rejim tanlash */}
+        <div className="flex items-center justify-between px-1 text-[11px]">
+          
+          {/* Rejimni almashtirish: Sizning gapingiz vs Suhbatdosh gapi */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setInputMode('user')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-lg font-bold text-[10px] transition-all ${
+                inputMode === 'user'
+                  ? 'bg-brand-lime text-black font-extrabold shadow-sm'
+                  : 'bg-dark-800 text-gray-400 hover:text-white border border-dark-700'
+              }`}
+            >
+              <PenTool className="w-2.5 h-2.5" />
+              <span>Javobingizni yozing</span>
+            </button>
+
+            <button
+              onClick={() => setInputMode('partner')}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-lg font-bold text-[10px] transition-all ${
+                inputMode === 'partner'
+                  ? 'bg-sky-400 text-black font-extrabold shadow-sm'
+                  : 'bg-dark-800 text-gray-400 hover:text-white border border-dark-700'
+              }`}
+            >
+              <MessageSquareQuote className="w-2.5 h-2.5" />
+              <span>Suhbatdosh gapi</span>
+            </button>
+          </div>
+
+          {/* Tarjima tili pills (Foydalanuvchi qaysi tilga tarjima qilmoqchi) */}
+          {inputMode === 'user' && (
+            <div className="flex items-center gap-1 bg-dark-800/80 p-0.5 rounded-lg border border-dark-700/80">
+              <span className="text-[9px] text-gray-400 pl-1">Til:</span>
+              {TARGET_LANGUAGES.map((tLang) => (
+                <button
+                  key={tLang.code}
+                  onClick={() => setTranslationTargetLang(tLang.code)}
+                  className={`px-1.5 py-0.5 rounded-md text-[9px] font-bold transition-all ${
+                    translationTargetLang === tLang.code
+                      ? 'bg-brand-lime/20 text-brand-lime border border-brand-lime/40'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                  title={`${tLang.name}ga tarjima qilish`}
+                >
+                  {tLang.flag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Input form */}
+        <form onSubmit={handleManualSubmit} className="flex items-center gap-1.5 bg-dark-800/95 border border-dark-700/90 rounded-2xl px-3 py-1.5 sm:py-2 focus-within:border-brand-lime shadow-inner">
           <input
             type="text"
             value={manualInput}
             onChange={(e) => setManualInput(e.target.value)}
-            placeholder="Suhbatdosh javobini yozing (istalgan tilda)..."
-            className="bg-transparent flex-1 text-xs text-white placeholder-gray-500 focus:outline-none"
+            placeholder={
+              inputMode === 'user'
+                ? `Javobingizni yozing (${TARGET_LANGUAGES.find(l => l.code === translationTargetLang)?.name || 'Ruscha'}ga tarjima qilinadi)...`
+                : "Suhbatdosh aytgan gapni yozing..."
+            }
+            className="bg-transparent flex-1 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none font-medium"
           />
           <button
             type="submit"
             disabled={!manualInput.trim()}
-            className="p-1.5 rounded-xl bg-brand-lime text-black hover:bg-lime-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none"
-            title="Javob olish"
+            className="p-1.5 sm:p-2 rounded-xl bg-brand-lime text-black hover:bg-lime-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none shrink-0"
+            title={inputMode === 'user' ? "Tarjima qilib ekranga chiqarish" : "AI tahlil qilish"}
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           </button>
         </form>
-      </div>
+      </section>
 
-      {/* 4. PASTKI QISM: MIKROFON DOIM ANIQ SHU YERDA TURADI (Skroll yo'q, pastki quloqqa yaqin!) */}
+      {/* 4. PASTKI QISM: MIKROFON (Skroll yo'q, quloqqa va bosh barmog'iga yaqin) */}
       <footer className="w-full max-w-md mx-auto shrink-0 pt-0.5 pb-1 flex flex-col items-center justify-center z-20">
         
         {/* KATTA SHAZAM MIKROFON TUGMASI */}
-        <div className="relative flex items-center justify-center mb-0.5">
+        <div className="relative flex items-center justify-center">
           {isListening && (
             <>
               <div
@@ -434,7 +558,7 @@ export default function App() {
 
           <button
             onClick={toggleListening}
-            className={`relative z-10 w-18 h-18 sm:w-20 sm:h-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 active:scale-95 shadow-2xl ${
+            className={`relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 active:scale-95 shadow-2xl ${
               isListening
                 ? 'bg-gradient-to-tr from-emerald-500 to-brand-lime text-black shadow-[0_0_35px_rgba(210,255,58,0.55)] ring-4 ring-brand-lime/40'
                 : 'bg-dark-800 hover:bg-dark-750 text-white border-2 border-brand-lime/40 shadow-[0_0_20px_rgba(210,255,58,0.2)] hover:border-brand-lime'
@@ -442,102 +566,80 @@ export default function App() {
           >
             {isListening ? (
               <>
-                <MicOff className="w-6 h-6 animate-bounce" />
-                <span className="text-[9px] font-extrabold uppercase mt-0.5 tracking-wider">Tinglayapman</span>
+                <MicOff className="w-5 h-5 sm:w-6 sm:h-6 animate-bounce" />
+                <span className="text-[8px] sm:text-[9px] font-extrabold uppercase mt-0.5 tracking-wider">Tinglayapman</span>
               </>
             ) : (
               <>
-                <Mic className="w-6 h-6 text-brand-lime" />
-                <span className="text-[9px] font-bold text-gray-300 mt-0.5">Tinglash</span>
+                <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-brand-lime" />
+                <span className="text-[8px] sm:text-[9px] font-bold text-gray-300 mt-0.5 tracking-wider uppercase">Tinglash</span>
               </>
             )}
           </button>
         </div>
 
-        <p className="text-[10px] text-gray-400 font-medium">
-          {isListening ? (
-            <span className="text-brand-lime flex items-center gap-1.5 animate-pulse">
-              <span className="w-1.5 h-1.5 rounded-full bg-brand-lime" />
-              Pastki mikrofon suhbatni eshitmoqda...
-            </span>
-          ) : (
-            "Suhbatni eshitish uchun bosing"
-          )}
-        </p>
-
       </footer>
 
-      {/* GEMINI API KALITI MODALI */}
+      {/* 5. GEMINI API KALITI MODAL OYNASI */}
       {isApiKeyModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-sm bg-dark-900 border border-dark-700 rounded-3xl p-4 shadow-2xl">
-            <div className="flex items-center justify-between pb-2 border-b border-dark-800">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-emerald-400" />
-                <span>Gemini Super Intellekt (Cheksiz aql)</span>
-              </span>
-              <button
-                onClick={() => setIsApiKeyModalOpen(false)}
-                className="p-1 rounded-lg text-gray-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-dark-850 border border-dark-700 p-5 shadow-2xl relative">
+            <button
+              onClick={() => setIsApiKeyModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-dark-750 text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                <Zap className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-extrabold text-white">Gemini Super Intellekt</h3>
+                <p className="text-[10px] text-gray-400">Google AI Studio API kaliti</p>
+              </div>
             </div>
 
-            <p className="text-[11px] text-gray-300 mt-2 leading-relaxed">
-              Google AI Studio’dan bepul Gemini API kalitini kiritishingiz mumkin. Bu ilovani har qanday bahsda yutib chiqadigan, qora yumor va cheksiz bilimlarga ega super-intellektga aylantiradi.
+            <p className="text-xs text-gray-300 leading-relaxed mb-4">
+              Gemini ulanganda ilova barcha kutilmagan savollarga, har qanday bahsda yutib chiqishga va o'tkir qora yumorga ega bo'ladi.
             </p>
 
-            <form onSubmit={handleSaveApiKey} className="mt-3">
-              <div className="relative">
-                <Key className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-3" />
-                <input
-                  type="password"
-                  value={tempApiKey}
-                  onChange={(e) => setTempApiKey(e.target.value)}
-                  placeholder="AIzaSy... (Gemini API kaliti)"
-                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-dark-800 border border-dark-700 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400 font-mono"
-                />
+            <form onSubmit={handleSaveApiKey} className="space-y-3">
+              <div>
+                <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">
+                  Gemini API Key (AIzaSy...)
+                </label>
+                <div className="flex items-center gap-2 bg-dark-750 border border-dark-650 rounded-xl px-3 py-2 focus-within:border-emerald-400">
+                  <Key className="w-4 h-4 text-gray-400 shrink-0" />
+                  <input
+                    type="password"
+                    value={tempApiKey}
+                    onChange={(e) => setTempApiKey(e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="bg-transparent flex-1 text-xs text-white placeholder-gray-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
-              <div className="mt-2 flex items-center justify-between text-[10px]">
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-emerald-400 underline hover:text-emerald-300"
-                >
-                  Bepul kalit olish (Google AI Studio)
-                </a>
-                {geminiApiKey && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setTempApiKey('');
-                      setGeminiApiKey('');
-                      localStorage.removeItem('gemini_api_key');
-                    }}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    Kalitni o'chirish
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-4 flex gap-2">
+              <div className="flex items-center gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsApiKeyModalOpen(false)}
-                  className="flex-1 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:bg-dark-800"
+                  onClick={() => {
+                    setTempApiKey('');
+                    setGeminiApiKey('');
+                    localStorage.removeItem('gemini_api_key');
+                    setIsApiKeyModalOpen(false);
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-dark-750 hover:bg-dark-700 text-gray-300 text-xs font-bold transition-all"
                 >
-                  Bekor qilish
+                  O'chirish
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-brand-lime text-black font-extrabold text-xs flex items-center justify-center gap-1 shadow-md"
+                  className="flex-1 py-2 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black text-xs font-extrabold transition-all shadow-md shadow-emerald-500/20"
                 >
-                  <Check className="w-3.5 h-3.5" />
-                  <span>Saqlash</span>
+                  Saqlash
                 </button>
               </div>
             </form>
