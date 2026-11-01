@@ -1,190 +1,191 @@
 /**
  * SuhbatDosh - Ko'p tilli va Tarixni Eslab Qoluvchi Katta Ong (Multilingual Context Brain)
  * 
- * Tillar: Ruscha (RU), Inglizcha (EN), O'zbekcha (UZ), Turkcha (TR), Qozoqcha (KK), 
- * Nemischa (DE), Fransuzcha (FR), Ispancha (ES) va h.k.
- * 
  * Qoidalar:
- * 1. Suhbat tarixini to'liq eslab qoladi (Recall from memory).
- * 2. Savolga 100% aniq va tabiiy javob + Suhbatni davom ettiruvchi savol.
- * 3. Tagida to'liq O'zbekcha ma'nosi + Lotincha talaffuz o'qilishi.
- * 4. Quruq shablonlarsiz, jonli so'zlashuv va jargonlar.
- * 5. Suhbat mavzusiga mos dinamik hazillar.
+ * 1. Savollarga FAQAT ANIQ JAVOB beriladi (ortiqcha yopishtirilgan savollarsiz).
+ * 2. FAQAT kompliment / flirt vaziyatidagina savol beriladi.
+ * 3. Tinch bo'lib qolganda (jimlik, qisqa "ha", "ok", "nega jimsan") suhbatni jonlantiruvchi SAVOL TAKLIF QILINADI.
+ * 4. Qolgan ortiqcha narsalar yo'q!
  */
 
 import { detectLanguage } from './languageDetector.js';
 import { toPhonetic } from './conversationEngine.js';
 import { dialogueMemory } from './dialogueMemory.js';
-import { translateRussianToUzbek } from './nativeBrain.js';
+import { translateRussianToUzbek, generateAcquaintanceResponse as nativeBrainFunc } from './nativeBrain.js';
 
 // INGLIZCHA DIALOG MATRITSI
 const EN_DIALOGUE_MAP = [
-  // 1. App Testing
-  {
-    matcher: (t) => /test.*?app|app.*?test|check.*?app|continue.*?dialogue|mind.*?testing/i.test(t),
-    meaning: "Yangi ilovani sinab ko'rish uchun suhbatlashishga rozilik so'ramoqda",
-    responses: [
-      {
-        text: "Hey! Not at all, I'd love to test it. What should we start with?",
-        meaning: "Salom! Umuman qarshi emasman, sinab ko'rishga tayyorman. Nimadan boshlaymiz?",
-        note: "Rozilik + savol"
-      },
-      {
-        text: "Sure thing! Sounds interesting. What kind of app are you building?",
-        meaning: "Albatta! Qiziq tuyuldi. Qanday ilova yaratyapsan?",
-        note: "Yordam + qiziqish"
-      }
-    ],
-    jokes: [
-      {
-        text: "As long as your app doesn't take over the world) What's the first test?",
-        meaning: "Faqat ilovang dunyoni egallab olmasa bo'ldi) Birinchi test qanday?",
-        note: "IT hazili"
-      }
-    ]
-  },
-
-  // 2. City / Where do you live
+  // 1. City / Where do you live -> FAQAT ANIQ JAVOB!
   {
     matcher: (t) => /which city|what city|where do you live|where are you from|where you from/i.test(t),
     meaning: "Qaysi shahardansan? / Qayerda yashaysan?",
     responses: [
       {
-        text: "I'm from (city). Are you local here or did you move recently?",
-        meaning: "Men (shahar)danman. O'zing shu yerdanmisan yoki yaqinda ko'chib keldingmi?",
-        note: "Aniq javob + savol"
+        text: "I'm from (city).",
+        meaning: "Men (shahar)danman.",
+        note: "Aniq javob"
       },
       {
-        text: "I live in (city). Have you ever visited that city?",
-        meaning: "Men (shahar)da yashayman. U yerga biror marta borganmisan?",
-        note: "Suhbatni ulash"
+        text: "I live in (city).",
+        meaning: "Men (shahar)da yashayman.",
+        note: "Qisqa javob"
       }
     ],
     jokes: [
       {
-        text: "I'm from (city), where Google Maps gets lost too) Do you know this area well?",
-        meaning: "Men hatto Google xaritalari ham adashadigan (shahar)danman) Bu hududni yaxshi bilasanmi?",
+        text: "I'm from (city), where even Google Maps gets lost)",
+        meaning: "Men hatto Google xaritalari ham adashadigan (shahar)danman)",
         note: "Shahar hazili"
       }
     ]
   },
 
-  // 3. What do you do / Work
+  // 2. What do you do / Work -> FAQAT ANIQ JAVOB!
   {
     matcher: (t) => /what do you do|what are you doing|what's your job|what is your profession|where do you work/i.test(t),
     meaning: "Nima ish bilan shug'ullanasan? / Kasbing nima?",
     responses: [
       {
-        text: "I work in (field). Do you enjoy what you do for a living?",
-        meaning: "Men (soha) sohasida ishlayman. O'zingga o'z ishing yoqadimi?",
-        note: "Kasb + savol"
+        text: "I work in (field).",
+        meaning: "Men (soha) sohasida ishlayman.",
+        note: "Aniq javob"
       },
       {
-        text: "Just chilling and chatting right now. How are you planning your evening?",
-        meaning: "Hozircha shunchaki dam olib suhbatlashyapman. O'zing kechni qanday rejalashtiryapsan?",
-        note: "Hozirgi holat"
+        text: "Just chilling and relaxing right now.",
+        meaning: "Hozircha shunchaki dam olyapman.",
+        note: "Dam olish"
       }
     ],
     jokes: [
       {
-        text: "I mainly turn coffee into results) What about you?",
-        meaning: "Men kofeni natijaga aylantirib turaman) O'zing-chi?",
+        text: "I mainly turn coffee into results)",
+        meaning: "Men kofeni natijaga aylantirib turaman)",
         note: "Ish hazili"
       }
     ]
   },
 
-  // 4. Greetings
+  // 3. Greetings -> FAQAT JAVOB!
   {
     matcher: (t) => /^(hello|hi|hey|good morning|good afternoon|good evening|what's up)[\s.!?,]*$/i.test(t.trim()) || /\b(hello|hi|hey)\b/i.test(t),
     meaning: "Salom! / Xayrli kun!",
     responses: [
       {
-        text: "Hey there! How has your day been going?",
-        meaning: "Salom! Kuning qanday o'tyapti?",
-        note: "Samimiy salom + savol"
+        text: "Hey there!",
+        meaning: "Salom!",
+        note: "Oddiy salom"
       },
       {
-        text: "Hi! Glad to hear from you. What's new today?",
-        meaning: "Salom! Eshitganimdan xursandman. Bugun nima yangiliklar?",
-        note: "Jonli so'zlashuv"
+        text: "Hi! Glad to hear from you.",
+        meaning: "Salom! Eshitganimdan xursandman.",
+        note: "Do'stona"
       }
     ],
     jokes: [
       {
-        text: "Hey! I was just thinking about you) How's life?",
-        meaning: "Salom! Hozirgina seni o'ylagandim) Hayot qalay?",
+        text: "Hey! I was just thinking about you)",
+        meaning: "Salom! Hozirgina seni o'ylagandim)",
         note: "Iliq hazil"
       }
     ]
   },
 
-  // 5. How are you
+  // 4. How are you -> FAQAT ANIQ JAVOB!
   {
     matcher: (t) => /how are you|how is it going|how are things|how you doing|how's your day/i.test(t),
     meaning: "Ishlaring qalay? / Ahvoling qanday?",
     responses: [
       {
-        text: "Doing great, thank you! What exciting things happened in your day?",
-        meaning: "Hammasi a'lo, rahmat! Bugun o'zingda qanday qiziq voqealar bo'ldi?",
-        note: "A'lo + savol"
+        text: "Doing great, thank you!",
+        meaning: "Hammasi a'lo, rahmat!",
+        note: "A'lo javob"
       },
       {
-        text: "Can't complain, pretty good! What are your plans for today?",
-        meaning: "Yomon emas, ancha yaxshi! Bugunga qanday rejalaring bor?",
-        note: "Rejalar"
+        text: "Pretty good, everything is fine.",
+        meaning: "Hammasi yaxshi, joyida.",
+        note: "Oddiy javob"
       }
     ],
     jokes: [
       {
-        text: "So good that it's almost suspicious) How about you?",
-        meaning: "Shunchalik yaxshiki, hatto shubhali) O'zingda-chi?",
+        text: "So good that it's almost suspicious)",
+        meaning: "Shunchalik yaxshiki, hatto shubhali)",
         note: "Kayfiyat hazili"
       }
     ]
   },
 
-  // 6. Name / Acquaintance
+  // 5. Name / Acquaintance -> FAQAT ANIQ JAVOB!
   {
     matcher: (t) => /what is your name|what's your name|your name|who are you/i.test(t),
     meaning: "Isming nima? / Tanishaylikmi?",
     responses: [
       {
-        text: "I am (name). Very nice to meet you! What's your name?",
-        meaning: "Men (ism)man. Tanishganimdan xursandman! O'zingning isming nima?",
-        note: "Tanishuv + savol"
+        text: "I am (name). Nice to meet you!",
+        meaning: "Men (ism)man. Tanishganimdan xursandman!",
+        note: "Tanishuv"
       }
     ],
     jokes: [
       {
-        text: "I am (name). The main goal is not to forget names in five minutes) And you?",
-        meaning: "Men (ism)man. Asosiysi 5 daqiqadan keyin esdan chiqarmaslik) O'zingniki-chi?",
+        text: "I am (name). Just don't forget it in five minutes)",
+        meaning: "Men (ism)man. 5 minutdan keyin unutmasang bo'ldi)",
         note: "Ism hazili"
       }
     ]
   },
 
-  // 7. Coffee / Meetup
+  // 6. Compliment -> KOMPLIMENTDA SAVOL BERILADI!
   {
-    matcher: (t) => /coffee|grab a coffee|drink coffee|meet up|hang out|get food/i.test(t),
-    meaning: "Kofe ichamizmi? / Uchrashamizmi?",
+    matcher: (t) => /you look great|you are beautiful|handsome|cute|gorgeous|pretty/i.test(t),
+    meaning: "Juda chiroylisan / Ajoyib ko'rinyapsan (Kompliment)",
     responses: [
       {
-        text: "I'd love to! What time and which cafe do you prefer?",
-        meaning: "Jon deb! Soat nechada va qaysi qahvaxonani ma'qul ko'rasan?",
-        note: "Rozilik + vaqt"
+        text: "Thank you so much! Are you always this charming?",
+        meaning: "Katta rahmat! O'zing doim shunday e'tiborlimisan?",
+        note: "Komplimentga savol"
       },
       {
-        text: "Sure, let's go. Do you know a cozy place around here?",
-        meaning: "Albatta, ketdik. Shu atrofda shinam joyni bilasanmi?",
-        note: "Joy tanlash"
+        text: "Thank you! You look amazing yourself.",
+        meaning: "Rahmat! O'zing ham ajoyib ko'rinyapsan.",
+        note: "Qaytarma maqtov"
       }
     ],
     jokes: [
       {
-        text: "As long as the coffee is top-notch) What spot do you have in mind?",
-        meaning: "Asosiysi kofesi zo'r bo'lsin) Qaysi joy ko'nglingda bor?",
-        note: "Kofe hazili"
+        text: "Thank you, I spent hours in front of the mirror) Do you compliment people often?",
+        meaning: "Rahmat, oyna oldida soatlab tayyorlandim) Tez-tez maqtov aytib turasanmi?",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 7. Silence / Stalled dialogue -> TINCH BO'LIB QOLGANDA SAVOL TAKLIF QIL!
+  {
+    matcher: (t) => /^(?:yes|yeah|yep|sure|ok|okay|cool|nice|good|right)[\s.!?,]*$/i.test(t.trim()) || /why are you quiet|why silent|you there/i.test(t),
+    meaning: "Suhbat to'xtab qoldi / Jimlik (Suhbatni jonlantirish)",
+    responses: [
+      {
+        text: "By the way, what are your plans for tonight?",
+        meaning: "Aytgancha, bugun kechga qanday rejalaring bor?",
+        note: "Reja so'rash"
+      },
+      {
+        text: "Would you like to grab some coffee?",
+        meaning: "Birga kofe ichsak nima deysan?",
+        note: "Kofe taklifi"
+      },
+      {
+        text: "What kind of music or movies do you like?",
+        meaning: "Qanday musiqa yoki filmlarni yoqtirasan?",
+        note: "Qiziqish savoli"
+      }
+    ],
+    jokes: [
+      {
+        text: "Just picking the smartest words to say) What are you thinking about?",
+        meaning: "Eng aqlli so'zlarni tanlayotgandim) O'zing nimalarni o'ylayapsan?",
+        note: "Hazil"
       }
     ]
   }
@@ -197,20 +198,20 @@ const TR_DIALOGUE_MAP = [
     meaning: "Salom! / Xayrli kun!",
     responses: [
       {
-        text: "Merhaba! Günün nasıl geçiyor?",
-        meaning: "Salom! Kuning qanday o'tyapti?",
-        note: "Salom + savol"
+        text: "Merhaba!",
+        meaning: "Salom!",
+        note: "Salom"
       },
       {
-        text: "Selam! Seni duyduğuma sevindim, ne haber?",
-        meaning: "Salom! Eshitganimdan xursandman, nima gaplar?",
+        text: "Selam, seni duyduğuma sevindim!",
+        meaning: "Salom, eshitganimdan xursandman!",
         note: "Do'stona"
       }
     ],
     jokes: [
       {
-        text: "Selam! Tam da senden bahsediyordum) Hayat nasıl?",
-        meaning: "Salom! Hozirgina sen haqingda gapirayotgandim) Hayot qalay?",
+        text: "Selam! Tam da senden bahsediyordum)",
+        meaning: "Salom! Hozirgina sen haqingda o'ylayotgandim)",
         note: "Hazil"
       }
     ]
@@ -220,15 +221,20 @@ const TR_DIALOGUE_MAP = [
     meaning: "Qalaysan? / Ishlar qanday ketyapti?",
     responses: [
       {
-        text: "Her şey harika, teşekkürler! Sende ne var ne yok?",
-        meaning: "Hammasi ajoyib, rahmat! O'zingda nima gaplar?",
-        note: "A'lo + savol"
+        text: "Her şey harika, teşekkürler!",
+        meaning: "Hammasi ajoyib, rahmat!",
+        note: "A'lo"
+      },
+      {
+        text: "İyiyim, her şey yolunda.",
+        meaning: "Yaxshiman, hammasi joyida.",
+        note: "Oddiy"
       }
     ],
     jokes: [
       {
-        text: "O kadar iyiyim ki şüpheli) Sende durumlar nasıl?",
-        meaning: "Shunchalik yaxshiki, hatto shubhali) O'zingda ahvol qanday?",
+        text: "O kadar iyiyim ki şüpheli)",
+        meaning: "Shunchalik yaxshiki, hatto shubhali)",
         note: "Hazil"
       }
     ]
@@ -238,16 +244,16 @@ const TR_DIALOGUE_MAP = [
     meaning: "Qayerdansan? / Qaysi shaharda yashaysan?",
     responses: [
       {
-        text: "Ben (şehir)'liyim. Sen buralı mısın yoksa taşındın mı?",
-        meaning: "Men (shahar)likman. O'zing shu yerdanmisan yoki ko'chib kelganmisan?",
-        note: "Shahar + savol"
+        text: "Ben (şehir)'liyim.",
+        meaning: "Men (shahar)likman.",
+        note: "Aniq javob"
       }
     ],
     jokes: [
       {
-        text: "Navigasyonsuz gezilmeyen (şehir)'denim) Şehri iyi bilir misin?",
-        meaning: "Navigatorsiz yurib bo'lmaydigan (shahar)likman) Shaharni yaxshi bilasanmi?",
-        note: "Shahar hazili"
+        text: "Navigasyonsuz gezilmeyen (şehir)'denim)",
+        meaning: "Navigatorsiz yurib bo'lmaydigan (shahar)likman)",
+        note: "Hazil"
       }
     ]
   },
@@ -256,15 +262,58 @@ const TR_DIALOGUE_MAP = [
     meaning: "Nima ish bilan shug'ullanasan? / Kasbing nima?",
     responses: [
       {
-        text: "(alan) alanında çalışıyorum. Sen işini seviyor musun?",
-        meaning: "(Soha) sohasida ishlayman. O'zing ishingni sevasanmi?",
-        note: "Kasb + savol"
+        text: "(alan) alanında çalışıyorum.",
+        meaning: "(Soha) sohasida ishlayman.",
+        note: "Aniq javob"
       }
     ],
     jokes: [
       {
-        text: "Kahveyi sonuca dönüştürüyorum) Sen ne yapıyorsun?",
-        meaning: "Kofeni natijaga aylantiraman) O'zing nima ish qilasan?",
+        text: "Kahveyi sonuca dönüştürüyorum)",
+        meaning: "Kofeni natijaga aylantiraman)",
+        note: "Hazil"
+      }
+    ]
+  },
+  // Kompliment
+  {
+    matcher: (t) => /çok güzelsin|yakışıklısın|harika görünüyorsun/i.test(t),
+    meaning: "Juda chiroylisan (Kompliment)",
+    responses: [
+      {
+        text: "Çok teşekkür ederim! Hep böyle kibar mısın?",
+        meaning: "Katta rahmat! O'zing doim shunday muloyimmisan?",
+        note: "Komplimentga savol"
+      }
+    ],
+    jokes: [
+      {
+        text: "Aynanın karşısında saatler harcadım)",
+        meaning: "Oyna oldida soatlab tayyorlandim)",
+        note: "Hazil"
+      }
+    ]
+  },
+  // Jimlik
+  {
+    matcher: (t) => /^(?:evet|tamam|peki|güzel)[\s.!?,]*$/i.test(t.trim()) || /neden sustun|orada mısın/i.test(t),
+    meaning: "Jimlik (Suhbatni jonlantirish)",
+    responses: [
+      {
+        text: "Bu akşam için planların neler?",
+        meaning: "Bugun oqshomga rejalaring qanday?",
+        note: "Reja so'rash"
+      },
+      {
+        text: "Kahve içmeye ne dersin?",
+        meaning: "Kofe ichsak nima deysan?",
+        note: "Kofe taklifi"
+      }
+    ],
+    jokes: [
+      {
+        text: "En akıllı sözleri seçmeye çalışıyordum)",
+        meaning: "Eng aqlli so'zlarni tanlayotgandim)",
         note: "Hazil"
       }
     ]
@@ -278,20 +327,20 @@ const UZ_DIALOGUE_MAP = [
     meaning: "Salomlashish va hol-ahvol so'rash",
     responses: [
       {
-        text: "Salom! Rahmat, a'lo darajada. Kuningiz qanday o'tyapti?",
-        meaning: "Salom! Rahmat, a'lo darajada. Kuningiz qanday o'tyapti?",
-        note: "Samimiy salom + savol"
+        text: "Salom! Rahmat, hammasi yaxshi.",
+        meaning: "Salom! Rahmat, hammasi yaxshi.",
+        note: "Salom"
       },
       {
-        text: "Assalomu alaykum! Xursandman eshitganimdan. O'zingizda nima yangiliklar?",
-        meaning: "Assalomu alaykum! O'zingizda nima yangiliklar?",
+        text: "Assalomu alaykum! Xursandman eshitganimdan.",
+        meaning: "Assalomu alaykum! Xursandman eshitganimdan.",
         note: "Odobli"
       }
     ],
     jokes: [
       {
-        text: "Salom! Hozirgina sizni eslayotgandim) Kayfiyatlar qalay?",
-        meaning: "Salom! Hozirgina sizni eslayotgandim) Kayfiyatlar qalay?",
+        text: "Salom! Hozirgina sizni eslayotgandim)",
+        meaning: "Salom! Hozirgina sizni eslayotgandim)",
         note: "Iliq hazil"
       }
     ]
@@ -301,52 +350,77 @@ const UZ_DIALOGUE_MAP = [
     meaning: "Shahar va manzil haqida so'ramoqda",
     responses: [
       {
-        text: "Men (shahar)danman. O'zingiz shu yerdanmisiz yoki ko'chib kelganmisiz?",
-        meaning: "Men (shahar)danman. O'zingiz shu yerdanmisiz yoki ko'chib kelganmisiz?",
-        note: "Aniq javob + savol"
+        text: "Men (shahar)danman.",
+        meaning: "Men (shahar)danman.",
+        note: "Aniq javob"
       }
     ],
     jokes: [
       {
-        text: "Men (shahar)danman, navigatorsiz adashib qolish hech gap emas) Shaharni yaxshi bilasizmi?",
-        meaning: "Men (shahar)danman) Shaharni yaxshi bilasizmi?",
+        text: "Men (shahar)danman, navigatorsiz adashib qolish hech gap emas)",
+        meaning: "Men (shahar)danman)",
         note: "Shahar hazili"
       }
     ]
   },
   {
-    matcher: (t) => /nima ish qilasiz|kasbingiz nima|nima bilan bandsiz|qayerda clarifies/i.test(t),
+    matcher: (t) => /nima ish qilasiz|kasbingiz nima|nima bilan bandsiz/i.test(t),
     meaning: "Kasb va mashg'ulot haqida so'ramoqda",
     responses: [
       {
-        text: "(soha) sohasida ishlayman. O'zingizga ishingiz yoqadimi?",
-        meaning: "(soha) sohasida ishlayman. O'zingizga ishingiz yoqadimi?",
-        note: "Kasb + savol"
+        text: "(soha) sohasida ishlayman.",
+        meaning: "(soha) sohasida ishlayman.",
+        note: "Aniq javob"
       }
     ],
     jokes: [
       {
-        text: "(soha)daman — asosan qahvani natijalarga aylantiraman) O'zingiz nima ish qilasiz?",
-        meaning: "Qahvani natijalarga aylantiraman) O'zingiz nima ish qilasiz?",
+        text: "(soha)daman — asosan qahvani natijalarga aylantiraman)",
+        meaning: "Qahvani natijalarga aylantiraman)",
         note: "Hazil"
       }
     ]
   },
+  // Kompliment
   {
-    matcher: (t) => /kofe|qahva|aylanamizmi|uchrashamizmi|kofe ichamizmi/i.test(t),
-    meaning: "Kofe ichish yoki uchrashuv taklifi",
+    matcher: (t) => /chiroylisiz|ajoyib korinasiz|chiroyli/i.test(t),
+    meaning: "Maqtov / Kompliment",
     responses: [
       {
-        text: "Jon deb, ajoyib fikr! Soat nechada va qaysi qahvaxonaga boramiz?",
-        meaning: "Jon deb, ajoyib fikr! Soat nechada va qayerga boramiz?",
-        note: "Rozilik + vaqt"
+        text: "Katta rahmat, juda yoqimli! O'zingiz doim shunday e'tiborlimisiz?",
+        meaning: "Katta rahmat, juda yoqimli! O'zingiz doim shunday e'tiborlimisiz?",
+        note: "Komplimentga savol"
       }
     ],
     jokes: [
       {
-        text: "Asosiysi qahvasi zo'r bo'lsin) Qaysi joy ko'nglingizda bor?",
-        meaning: "Asosiysi kofesi zo'r bo'lsin) Qaysi joy bor?",
-        note: "Qahva hazili"
+        text: "Rahmat, oyna oldida rosa harakat qildim)",
+        meaning: "Rahmat, oyna oldida rosa harakat qildim)",
+        note: "Hazil"
+      }
+    ]
+  },
+  // Jimlik
+  {
+    matcher: (t) => /^(?:ha|mayli|xop|yaxshi|tushunarli)[\s.!?,]*$/i.test(t.trim()) || /nega jimsiz|qayerdasiz/i.test(t),
+    meaning: "Suhbat to'xtab qoldi (Suhbatni jonlantirish)",
+    responses: [
+      {
+        text: "Aytgancha, bugun kechga qanday rejalaringiz bor?",
+        meaning: "Aytgancha, bugun kechga qanday rejalaringiz bor?",
+        note: "Reja so'rash"
+      },
+      {
+        text: "Birga kofe ichsak nima deysiz?",
+        meaning: "Birga kofe ichsak nima deysiz?",
+        note: "Kofe taklifi"
+      }
+    ],
+    jokes: [
+      {
+        text: "Eng aqlli so'zlarni tanlayotgandim) O'zingiz nimalarni o'ylayapsiz?",
+        meaning: "Eng aqlli so'zlarni tanlayotgandim)",
+        note: "Hazil"
       }
     ]
   }
@@ -415,14 +489,14 @@ export function generateMultilingualResponse(input, selectedIndex = 0, isJokeReq
       partnerText: "Привет!",
       partnerMeaning: "Salom! / Assalomu alaykum!",
       detectedLanguage: { code: 'ru', name: 'Rus tili', flag: '🇷🇺' },
-      userResponse: "Привет! Как твой день проходит?",
-      userMeaning: "Salom! Kuning qanday o'tyapti?",
-      userPronunciation: "[Privet! Kak tvoy den proxodit?]",
-      userNote: "Samimiy salom + savol",
+      userResponse: "Привет!",
+      userMeaning: "Salom!",
+      userPronunciation: "[Privet!]",
+      userNote: "Oddiy salom",
       isJoke: false,
       allVariants: [
-        { text: "Привет! Как твой день проходит?", meaning: "Salom! Kuning qanday o'tyapti?", note: "Samimiy salom + savol" },
-        { text: "Салют! Рад слышать, как твое настроение?", meaning: "Salom! Eshitganimdan xursandman, kayfiyating qalay?", note: "Jonli so'zlashuv" }
+        { text: "Привет!", meaning: "Salom!", note: "Oddiy salom" },
+        { text: "Салют, рад слышать!", meaning: "Salom, eshitganimdan xursandman!", note: "Jonli so'zlashuv" }
       ],
       currentVariantIndex: 0,
       totalVariants: 2,
@@ -474,9 +548,7 @@ export function generateMultilingualResponse(input, selectedIndex = 0, isJokeReq
 
   // Agar tanlangan tilda topilmasa yoki til Ruscha bo'lsa, ruscha eng boy bazaga murojaat qilamiz
   if (!matched && (langCode === 'ru' || !mapToUse)) {
-    // nativeBrain'dagi boy bazadan foydalanamiz
-    const { generateAcquaintanceResponse } = requireNativeBrain();
-    const res = generateAcquaintanceResponse(clean, selectedIndex, isJokeRequested);
+    const res = nativeBrainFunc(clean, selectedIndex, isJokeRequested);
     return {
       ...res,
       partnerMeaning: partnerMeaning || res.partnerMeaning,
@@ -484,39 +556,39 @@ export function generateMultilingualResponse(input, selectedIndex = 0, isJokeReq
     };
   }
 
-  // Agar chet tilida matched bo'lmasa, chet tili uchun mantiqiy ulovchi javob
+  // Agar chet tilida matched bo'lmasa, chet tili uchun mantiqiy aniq javob
   if (!matched) {
     if (langCode === 'en') {
       matched = {
         meaning: partnerMeaning,
         responses: [
-          { text: "That sounds logical! What are your thoughts on that moving forward?", meaning: "Mantiqli eshitildi! Bu borada keyin nima deb o'ylaysan?", note: "Mantiqiy savol" },
-          { text: "I totally agree with you. How did you come to that conclusion?", meaning: "Senga to'liq qo'shilaman. Bu fikrga qanday kelding?", note: "Qiziqish" }
+          { text: "Got it, sounds reasonable.", meaning: "Tushundim, mantiqli.", note: "Rozilik" },
+          { text: "I agree with that.", meaning: "Bunga qo'shilaman.", note: "Qo'shilish" }
         ],
         jokes: [
-          { text: "Sounds solid, I won't even argue with that) What's next on your mind?", meaning: "Salobatli eshitildi, bahslashmayman ham) Keyin nima rejalaring bor?", note: "Hazil" }
+          { text: "Sounds solid, I won't even argue)", meaning: "Salobatli eshitildi, bahslashmayman ham)", note: "Hazil" }
         ]
       };
     } else if (langCode === 'tr') {
       matched = {
         meaning: partnerMeaning,
         responses: [
-          { text: "Çok mantıklı! Peki bu konuda daha sonra ne düşünüyorsun?", meaning: "Juda mantiqli! Bu borada keyin nima deb o'ylaysan?", note: "Mantiqiy davom" },
-          { text: "Sana katılıyorum. Bu sonuca nasıl vardın?", meaning: "Senga qo'shilaman. Bu xulosaga qanday kelding?", note: "Qiziqish" }
+          { text: "Anladım, gayet mantıklı.", meaning: "Tushundim, mantiqli.", note: "Rozilik" },
+          { text: "Sana katılıyorum.", meaning: "Senga qo'shilaman.", note: "Qo'shilish" }
         ],
         jokes: [
-          { text: "Kulağa harika geliyor, hiç itiraz etmem) Sırada ne var?", meaning: "Ajoyib eshitildi, e'tiroz bildirmayman) Keyingi rejalar nima?", note: "Hazil" }
+          { text: "Kulağa harika geliyor, itiraz etmem)", meaning: "Ajoyib eshitildi, e'tiroz bildirmayman)", note: "Hazil" }
         ]
       };
     } else {
       matched = {
         meaning: partnerMeaning,
         responses: [
-          { text: "Mantiqli eshitildi! Bu borada keyin nima deb o'ylaysiz?", meaning: "Mantiqli eshitildi! Bu borada keyin nima deb o'ylaysiz?", note: "Mantiqiy davom" },
-          { text: "To'liq qo'shilaman. Bu fikrga qanday keldingiz?", meaning: "To'liq qo'shilaman. Bu fikrga qanday keldingiz?", note: "Qiziqish" }
+          { text: "Tushundim, mantiqli.", meaning: "Tushundim, mantiqli.", note: "Rozilik" },
+          { text: "Sizga qo'shilaman.", meaning: "Sizga qo'shilaman.", note: "Qo'shilish" }
         ],
         jokes: [
-          { text: "Gap bo'lishi mumkin emas, hatto bahslashmayman ham) Keyin nima rejalaringiz bor?", meaning: "Bahslashmayman ham) Keyin nima rejalaringiz bor?", note: "Hazil" }
+          { text: "Gap yo'q, bahslashmayman ham)", meaning: "Bahslashmayman ham)", note: "Hazil" }
         ]
       };
     }
@@ -544,10 +616,4 @@ export function generateMultilingualResponse(input, selectedIndex = 0, isJokeReq
     totalVariants: candidateList.length,
     stepCount: dialogueMemory.getStepCount()
   };
-}
-
-// Native brainni xavfsiz yuklash
-import { generateAcquaintanceResponse as nativeBrainFunc } from './nativeBrain.js';
-function requireNativeBrain() {
-  return { generateAcquaintanceResponse: nativeBrainFunc };
 }
