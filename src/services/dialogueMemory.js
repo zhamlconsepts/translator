@@ -118,15 +118,15 @@ class DialogueMemoryService {
     if (/как тебя зовут|твое имя|напомни.*?имя|what.*?your name|isming nima/i.test(lower) && this.history.length > 2) {
       if (currentLanguage === 'en') {
         return {
-          text: "I am (name). We were talking just now, remember? What were we discussing?",
-          meaning: "Men (ism)man. Hozirgina gaplashayotgandik, esingdami? Nima haqida gaplashayotgandik?",
+          text: "I am (name). We just introduced ourselves.",
+          meaning: "Men (ism)man. Hozirgina tanishgandik.",
           note: "Ismni eslatish"
         };
       } else {
         return {
-          text: "Я (имя), мы как раз только что познакомились) О чем продолжим говорить?",
-          meaning: "Men (ism)man, hozirgina tanishgandik) Nima haqida suhbatni davom ettiramiz?",
-          note: "Ismni eslatish + savol"
+          text: "Я (имя), мы как раз только что познакомились.",
+          meaning: "Men (ism)man, hozirgina tanishgandik.",
+          note: "Ismni eslatish"
         };
       }
     }
@@ -138,15 +138,15 @@ class DialogueMemoryService {
         const lastTurn = lastFewTurns[lastFewTurns.length - 1];
         if (currentLanguage === 'en') {
           return {
-            text: `We were just talking about "${lastTurn.text}". What are your thoughts on that?`,
-            meaning: `Hozirgina "${lastTurn.meaning || lastTurn.text}" haqida gaplashayotgandik. Bu borada nima deb o'ylaysan?`,
+            text: `We were talking about: "${lastTurn.text}".`,
+            meaning: `"${lastTurn.meaning || lastTurn.text}" haqida gaplashayotgandik.`,
             note: "Mavzuni eslatish"
           };
         } else {
           return {
-            text: `Мы как раз говорили о: "${lastTurn.text}". Что ты дальше думаешь по этому поводу?`,
-            meaning: `Hozirgina "${lastTurn.meaning || lastTurn.text}" haqida gaplashayotgandik. Bu borada keyin nima deb o'ylaysan?`,
-            note: "Mavzuni eslatish + savol"
+            text: `Мы говорили о: "${lastTurn.text}".`,
+            meaning: `"${lastTurn.meaning || lastTurn.text}" haqida gaplashayotgandik.`,
+            note: "Mavzuni eslatish"
           };
         }
       }
@@ -156,15 +156,15 @@ class DialogueMemoryService {
     if (/что за приложение|какое приложение|про приложение|what app/i.test(lower)) {
       if (currentLanguage === 'en') {
         return {
-          text: "It's an intelligent conversational teleprompter app for live chats. Do you like tech and new apps?",
-          meaning: "Bu jonli suhbatlar uchun aqlli yordamchi ilova. Yangi texnologiyalar va ilovalarni yoqtirasanmi?",
+          text: "It's an intelligent conversational teleprompter app for live chats.",
+          meaning: "Bu jonli suhbatlar uchun aqlli yordamchi ilova.",
           note: "Ilovani tushuntirish"
         };
       } else {
         return {
-          text: "Это умный суфлер для живого общения и знакомств. А ты вообще часто новые приложения тестируешь?",
-          meaning: "Bu jonli muloqot va tanishuvlar uchun aqlli yordamchi. O'zing tez-tez yangi ilovalarni sinab turasanmi?",
-          note: "Ilovani eslatish + savol"
+          text: "Это умный суфлер для живого общения.",
+          meaning: "Bu jonli muloqot uchun aqlli yordamchi.",
+          note: "Ilovani tushuntirish"
         };
       }
     }
@@ -173,15 +173,15 @@ class DialogueMemoryService {
     if (/ты откуда|из какого города|где живешь|where are you from/i.test(lower) && this.history.length > 3) {
       if (currentLanguage === 'en') {
         return {
-          text: "I live in (city). Have you ever been there?",
-          meaning: "Men (shahar)da yashayman. U yerda biror marta bo'lganmisan?",
-          note: "Shahar haqida"
+          text: "I live in (city).",
+          meaning: "Men (shahar)da yashayman.",
+          note: "Shahar"
         };
       } else {
         return {
-          text: "Я из (город). А ты в моем городе бывал(а) когда-нибудь?",
-          meaning: "Men (shahar)danman. O'zing mening shahrimda bo'lganmisan?",
-          note: "Shahar haqida"
+          text: "Я из (город).",
+          meaning: "Men (shahar)danman.",
+          note: "Shahar"
         };
       }
     }

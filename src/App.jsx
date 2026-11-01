@@ -4,6 +4,7 @@ import { SpeechService } from './services/speechService';
 import { generateMultilingualResponse } from './services/multilingualBrain.js';
 import { generateGeminiSuperResponse } from './services/geminiService.js';
 import { dialogueMemory } from './services/dialogueMemory.js';
+import { toPhonetic } from './services/conversationEngine.js';
 
 // Faqat parametr tokenlarini ajratib chiroyli ko'rsatish
 function renderHighlightedText(text, isUzbek = false) {
@@ -107,17 +108,29 @@ export default function App() {
     setStepCount(dialogueMemory.getStepCount());
   };
 
-  // Variantni tanlash
-  const handleSelectVariant = async (index) => {
+  // Variantni tanlash (Darhol 0-ms tezkorlikda variantlar ichidan almashtirish)
+  const handleSelectVariant = (index) => {
     setVariantIndex(index);
-    const aiResult = await computeResponse(partnerSpeech, index, isJokeActive);
-    setResult(aiResult);
+    if (result?.allVariants && result.allVariants[index]) {
+      const selected = result.allVariants[index];
+      const pronunciation = toPhonetic(selected.text);
+      const updated = {
+        ...result,
+        userResponse: selected.text,
+        userMeaning: selected.meaning,
+        userPronunciation: `[${pronunciation}]`,
+        userNote: selected.note || `Variant ${index + 1}`,
+        currentVariantIndex: index
+      };
+      setResult(updated);
 
-    // Xotiradagi foydalanuvchi tanlagan javobni yangilash
-    if (dialogueMemory.history.length > 0 && dialogueMemory.history[dialogueMemory.history.length - 1].speaker === 'user') {
-      dialogueMemory.history[dialogueMemory.history.length - 1].text = aiResult.userResponse;
-      dialogueMemory.history[dialogueMemory.history.length - 1].meaning = aiResult.userMeaning;
+      if (dialogueMemory.history.length > 0 && dialogueMemory.history[dialogueMemory.history.length - 1].speaker === 'user') {
+        dialogueMemory.history[dialogueMemory.history.length - 1].text = selected.text;
+        dialogueMemory.history[dialogueMemory.history.length - 1].meaning = selected.meaning;
+      }
+      return;
     }
+    updateAiResponse(partnerSpeech, index, isJokeActive);
   };
 
   // 🎭 Hazil rejimiga o'tish (Mavzuga qarab dinamik o'zgaradi!)

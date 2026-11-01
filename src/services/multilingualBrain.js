@@ -135,7 +135,57 @@ const EN_DIALOGUE_MAP = [
     ]
   },
 
-  // 6. Compliment -> KOMPLIMENTDA SAVOL BERILADI!
+  // 6. Relationship status -> FAQAT ANIQ JAVOB!
+  {
+    matcher: (t) => /are you single|are you married|do you have a girlfriend|do you have a boyfriend|in a relationship/i.test(t),
+    meaning: "Uylanganmisan? / Yigiting yoki qizing bormi?",
+    responses: [
+      {
+        text: "No, I'm completely single and free.",
+        meaning: "Yo'q, butunlay bo'shman.",
+        note: "Aniq javob"
+      },
+      {
+        text: "Single, haven't met the right one yet.",
+        meaning: "Bo'ydoqman, hali o'sha insonimni uchratmadim.",
+        note: "Samimiy"
+      }
+    ],
+    jokes: [
+      {
+        text: "In a serious relationship with freedom and coffee)",
+        meaning: "Ozodlik va kofe bilan jiddiy munosabatdaman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 7. Hang out / Walk / Meet -> FAQAT ANIQ JAVOB!
+  {
+    matcher: (t) => /wanna hang out|wanna walk|let's meet|wanna grab coffee|go for a walk/i.test(t),
+    meaning: "Aylangani boramizmi? / Kofe ichamizmi?",
+    responses: [
+      {
+        text: "Sure, I'd love to! What time?",
+        meaning: "Albatta, jon deb! Soat nechada?",
+        note: "Aniq rozilik"
+      },
+      {
+        text: "Sounds great, let's do it.",
+        meaning: "Ajoyib eshitildi, ketdik.",
+        note: "Rozilik"
+      }
+    ],
+    jokes: [
+      {
+        text: "If there's good coffee involved, I'm already on my way)",
+        meaning: "Agar yaxshi kofe bo'lsa, allaqachon yo'ldaman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 8. Compliment -> KOMPLIMENTDA SAVOL BERILADI!
   {
     matcher: (t) => /you look great|you are beautiful|handsome|cute|gorgeous|pretty/i.test(t),
     meaning: "Juda chiroylisan / Ajoyib ko'rinyapsan (Kompliment)",
@@ -160,7 +210,7 @@ const EN_DIALOGUE_MAP = [
     ]
   },
 
-  // 7. Insult / Debate comeback -> GAPDA YUTIB CHIQISH VA MOT QILISH!
+  // 9. Insult / Debate comeback -> GAPDA YUTIB CHIQISH VA MOT QILISH!
   {
     matcher: (t) => /idiot|stupid|shut up|get lost|bullshit|nonsense|who do you think|annoying|leave me alone|fuck/i.test(t),
     meaning: "Qo'pollik / Bahsda mot qilish va yutib chiqish",
@@ -347,23 +397,48 @@ const TR_DIALOGUE_MAP = [
         note: "Hazil"
       }
     ]
+  },
+  // Hakaret / Tartışma
+  {
+    matcher: (t) => /aptal|salak|kes sesini|defol|saçmalık|gerizekalı|terbiyesiz/i.test(t),
+    meaning: "Qo'pollik / Bahsda mot qilish va yutib chiqish",
+    responses: [
+      {
+        text: "Argümanlar bitince hakarete geçilir. Konu hakkında mantıklı bir sözün var mı?",
+        meaning: "Dalillar tugaganda odatda haqoratga o'tishadi. Mavzu bo'yicha asosli biror gaping bormi?",
+        note: "Baxsda mot qilish"
+      },
+      {
+        text: "Sözlerin benim hakkımda değil, sadece kendi seviyeni gösteriyor.",
+        meaning: "So'zlaring men haqimda emas, faqat o'zingning darajangni ko'rsatyapti.",
+        note: "Sovuqqon raddiya"
+      }
+    ],
+    jokes: [
+      {
+        text: "Beni kırmaya o kadar uğraşıyorsun ki neredeyse üzüleceğim) Biraz sakin ol.",
+        meaning: "Meni xafa qilishga shunchalik urinyapsanki, hatto rahmim kelyapti) Sal bosiqroq bo'l.",
+        note: "Hazil"
+      }
+    ]
   }
 ];
 
 // O'ZBEKCHA DIALOG MATRITSI
 const UZ_DIALOGUE_MAP = [
+  // 1. Salomlashish va hol-ahvol
   {
-    matcher: (t) => /salom|assalomu alaykum|qalaysiz|qalesiz|yaxshimisiz/i.test(t),
+    matcher: (t) => /salom|assalomu alaykum|qalaysiz|qalesiz|qalesan|yaxshimisiz|yaxshimisan|tuzukmisiz/i.test(t),
     meaning: "Salomlashish va hol-ahvol so'rash",
     responses: [
       {
-        text: "Salom! Rahmat, hammasi yaxshi.",
-        meaning: "Salom! Rahmat, hammasi yaxshi.",
+        text: "Salom! Rahmat, hammasi a'lo darajada.",
+        meaning: "Salom! Rahmat, hammasi a'lo darajada.",
         note: "Salom"
       },
       {
-        text: "Assalomu alaykum! Xursandman eshitganimdan.",
-        meaning: "Assalomu alaykum! Xursandman eshitganimdan.",
+        text: "Assalomu alaykum! Eshitganimdan xursandman.",
+        meaning: "Assalomu alaykum! Eshitganimdan xursandman.",
         note: "Odobli"
       }
     ],
@@ -375,64 +450,190 @@ const UZ_DIALOGUE_MAP = [
       }
     ]
   },
+
+  // 2. Shahar va manzil (Qayerdansan / Qayerdansiz)
   {
-    matcher: (t) => /qayerdansiz|qaysi shahardansiz|qayerda yashaysiz|qayerliksiz/i.test(t),
-    meaning: "Shahar va manzil haqida so'ramoqda",
+    matcher: (t) => /qayerdansan|qayerdansiz|qaysi shahardansan|qaysi shahardansiz|qayerda yashaysan|qayerda yashaysiz|qayerliksiz|qayerliksan/i.test(t),
+    meaning: "Qaysi shahardansan? / Qayerda yashaysan?",
     responses: [
       {
         text: "Men (shahar)danman.",
         meaning: "Men (shahar)danman.",
         note: "Aniq javob"
+      },
+      {
+        text: "(shahar)da yashayman.",
+        meaning: "(shahar)da yashayman.",
+        note: "Qisqa javob"
       }
     ],
     jokes: [
       {
         text: "Men (shahar)danman, navigatorsiz adashib qolish hech gap emas)",
-        meaning: "Men (shahar)danman)",
+        meaning: "Men (shahar)danman, navigatorsiz adashib qolasiz)",
         note: "Shahar hazili"
       }
     ]
   },
+
+  // 3. Kim / Ism / Tanishuv
   {
-    matcher: (t) => /nima ish qilasiz|kasbingiz nima|nima bilan bandsiz/i.test(t),
-    meaning: "Kasb va mashg'ulot haqida so'ramoqda",
+    matcher: (t) => /ismingiz nima|isming nima|tanishaylik|kimsan|kimsiz|otim|isming/i.test(t),
+    meaning: "Ismingiz nima? / Tanishaylikmi?",
+    responses: [
+      {
+        text: "Men (ism)man. Tanishganimdan xursandman!",
+        meaning: "Men (ism)man. Tanishganimdan xursandman!",
+        note: "Tanishuv"
+      },
+      {
+        text: "Ismim (ism).",
+        meaning: "Ismim (ism).",
+        note: "Qisqa"
+      }
+    ],
+    jokes: [
+      {
+        text: "Men (ism)man. Besh daqiqadan keyin unutmasangiz bo'lgani)",
+        meaning: "Men (ism)man. Besh daqiqadan keyin unutmasangiz bo'lgani)",
+        note: "Ism hazili"
+      }
+    ]
+  },
+
+  // 4. Mashg'ulot / Ish / Kasb
+  {
+    matcher: (t) => /nima ish qilasiz|nima ish qilasan|kasbingiz nima|kasbing nima|nima bilan bandsiz|nima bilan bandsan|nima qilyapsan|nima qilyapsiz/i.test(t),
+    meaning: "Kasbingiz nima? / Nima ish qilasiz?",
     responses: [
       {
         text: "(soha) sohasida ishlayman.",
         meaning: "(soha) sohasida ishlayman.",
         note: "Aniq javob"
+      },
+      {
+        text: "Hozircha dam olyapman va suhbatlashyapman.",
+        meaning: "Hozircha dam olyapman va suhbatlashyapman.",
+        note: "Hozirgi holat"
       }
     ],
     jokes: [
       {
         text: "(soha)daman — asosan qahvani natijalarga aylantiraman)",
-        meaning: "Qahvani natijalarga aylantiraman)",
+        meaning: "(soha)daman — asosan qahvani natijalarga aylantiraman)",
+        note: "Ish hazili"
+      }
+    ]
+  },
+
+  // 5. Aylanish / Uchrashuv / Kofe
+  {
+    matcher: (t) => /aylanamizmi|aylangani boramizmi|qayerga boramiz|kofe ichamizmi|yur aylanaylik|uchrashamizmi/i.test(t),
+    meaning: "Aylangani boramizmi? / Kofe ichamizmi?",
+    responses: [
+      {
+        text: "Ketdik, men faqat roziman! Soat nechada?",
+        meaning: "Ketdik, men faqat roziman! Soat nechada?",
+        note: "Aniq rozilik"
+      },
+      {
+        text: "Yondagi qahvaxonaga kiraylik.",
+        meaning: "Yondagi qahvaxonaga kiraylik.",
+        note: "Kofe taklifi"
+      }
+    ],
+    jokes: [
+      {
+        text: "U yerda mazali shirinliklar bo'lsa — hoziroq yugurdim)",
+        meaning: "U yerda mazali shirinliklar bo'lsa — hoziroq yugurdim)",
         note: "Hazil"
       }
     ]
   },
-  // Kompliment
+
+  // 6. Oilaviy holat
   {
-    matcher: (t) => /chiroylisiz|ajoyib korinasiz|chiroyli/i.test(t),
+    matcher: (t) => /uylanganmisan|uylanganmisiz|turmushga chiqqanmisan|yigiting bormi|qizing bormi|sevganing bormi|oilalimisiz/i.test(t),
+    meaning: "Oilalimisiz? / Sevganingiz bormi?",
+    responses: [
+      {
+        text: "Yo'q, ko'nglim butunlay bo'sh.",
+        meaning: "Yo'q, ko'nglim butunlay bo'sh.",
+        note: "Aniq javob"
+      },
+      {
+        text: "Hozircha bo'ydoqman, o'sha insonimni uchratmadim.",
+        meaning: "Hozircha bo'ydoqman, o'sha insonimni uchratmadim.",
+        note: "Samimiy"
+      }
+    ],
+    jokes: [
+      {
+        text: "O'z erkinligim va kofe bilan jiddiy munosabatdaman)",
+        meaning: "O'z erkinligim va kofe bilan jiddiy munosabatdaman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 7. Bahsda yutish va haqoratga o'tkir raddiya (GAPDA DOIM YUTIB CHIQISH)
+  {
+    matcher: (t) => /ahmoq|tentak|jinni|yoqol|bor yoqol|asabimga tegma|befarosat|tupoy|chala|ogzingni yop|tur yoqol|kaltabin|odobsiz/i.test(t),
+    meaning: "Qo'pollik / Bahsda mot qilish va yutib chiqish",
+    responses: [
+      {
+        text: "Dalillar tugaganda odatda qo'pollikka o'tishadi. Asosli biror narsa ayta olasizmi?",
+        meaning: "Dalillar tugaganda odatda qo'pollikka o'tishadi. Asosli biror narsa ayta olasizmi?",
+        note: "Baxsda mot qilish"
+      },
+      {
+        text: "So'zlaringiz faqat o'zingizning tarbiyangiz darajasini ko'rsatyapti, ortiq emas.",
+        meaning: "So'zlaringiz faqat o'zingizning tarbiyangiz darajasini ko'rsatyapti, ortiq emas.",
+        note: "Sovuqqon raddiya"
+      },
+      {
+        text: "Qo'pollik va kibr sizni aqlliroq qilib qo'ymaydi. Fikrlar bilan gaplashishni o'rganing.",
+        meaning: "Qo'pollik va kibr sizni aqlliroq qilib qo'ymaydi. Fikrlar bilan gaplashishni o'rganing.",
+        note: "O'tkir javob"
+      }
+    ],
+    jokes: [
+      {
+        text: "Tegib ketishga shunchalik urinyapsizki, hatto rahmim kelyapti) Sal bosiqroq bo'ling.",
+        meaning: "Tegib ketishga shunchalik urinyapsizki, hatto rahmim kelyapti) Sal bosiqroq bo'ling.",
+        note: "Qora yumor"
+      }
+    ]
+  },
+
+  // 8. Kompliment (KOMPLIMENTDA SAVOL BERILADI!)
+  {
+    matcher: (t) => /chiroylisiz|chiroylisan|ajoyib korinasiz|chiroyli|gozalsiz|zo'r ko'rinasiz|kelishgan/i.test(t),
     meaning: "Maqtov / Kompliment",
     responses: [
       {
         text: "Katta rahmat, juda yoqimli! O'zingiz doim shunday e'tiborlimisiz?",
         meaning: "Katta rahmat, juda yoqimli! O'zingiz doim shunday e'tiborlimisiz?",
         note: "Komplimentga savol"
+      },
+      {
+        text: "Rahmat! O'zingiz ham juda ajoyib ko'rinyapsiz.",
+        meaning: "Rahmat! O'zingiz ham juda ajoyib ko'rinyapsiz.",
+        note: "Qaytarma maqtov"
       }
     ],
     jokes: [
       {
-        text: "Rahmat, oyna oldida rosa harakat qildim)",
-        meaning: "Rahmat, oyna oldida rosa harakat qildim)",
+        text: "Rahmat, oyna oldida rosa harakat qildim) Tez-tez maqtov aytib turasizmi?",
+        meaning: "Rahmat, oyna oldida rosa harakat qildim) Tez-tez maqtov aytib turasizmi?",
         note: "Hazil"
       }
     ]
   },
-  // Jimlik
+
+  // 9. Jimlik (SAVOL TAKLIF QILINADI!)
   {
-    matcher: (t) => /^(?:ha|mayli|xop|yaxshi|tushunarli)[\s.!?,]*$/i.test(t.trim()) || /nega jimsiz|qayerdasiz/i.test(t),
+    matcher: (t) => /^(?:ha|mayli|xop|xo'p|hop|yaxshi|tushunarli)[\s.!?,]*$/i.test(t.trim()) || /nega jimsiz|nega jimsan|shu yerdamisiz|qayerdasiz/i.test(t),
     meaning: "Suhbat to'xtab qoldi (Suhbatni jonlantirish)",
     responses: [
       {
@@ -444,6 +645,11 @@ const UZ_DIALOGUE_MAP = [
         text: "Birga kofe ichsak nima deysiz?",
         meaning: "Birga kofe ichsak nima deysiz?",
         note: "Kofe taklifi"
+      },
+      {
+        text: "Qanday musiqa yoki filmlarni yoqtirasiz?",
+        meaning: "Qanday musiqa yoki filmlarni yoqtirasiz?",
+        note: "Qiziqish savoli"
       }
     ],
     jokes: [
@@ -477,8 +683,12 @@ export function translateAnyToUzbek(text, langCode = 'ru') {
     if (/which city|where are you from|where do you live/i.test(lower)) return "Qaysi shahardansiz? / Qayerda yashaysiz?";
     if (/what do you do|what are you doing/i.test(lower)) return "Nima ish bilan shug'ullanasiz? / Nima qilyapsiz?";
     if (/how are you|how is it going/i.test(lower)) return "Ishlaringiz qalay? / Ahvolingiz qanday?";
-    if (/what is your name|what's your name/i.test(lower)) return "Ismingiz nima? / Tanishaylikmi?";
-    if (/coffee|hang out|meet up/i.test(lower)) return "Kofe ichamizmi? / Uchrashamizmi?";
+    if (/what is your name|what's your name|who are you/i.test(lower)) return "Ismingiz nima? / Tanishaylikmi?";
+    if (/what's new|what is new/i.test(lower)) return "Nima yangiliklar bor?";
+    if (/single|married|boyfriend|girlfriend/i.test(lower)) return "Uylanganmisiz? / Sevgilingiz bormi?";
+    if (/coffee|hang out|meet up|walk/i.test(lower)) return "Kofe ichamizmi? / Aylanamizmi?";
+    if (/beautiful|handsome|cute|pretty|look great/i.test(lower)) return "Juda chiroylisiz / Ajoyib ko'rinyapsiz (Kompliment)";
+    if (/idiot|stupid|shut up|get lost|loser/i.test(lower)) return "Sizga nisbatan qo'pollik / baxs qilinmoqda";
     if (/hello|hi|hey/i.test(lower)) return "Salom! / Assalomu alaykum!";
     if (/thank you|thanks/i.test(lower)) return "Rahmat! / Tashakkur!";
     if (/bye|see you/i.test(lower)) return "Xayr! / Ko'rishguncha!";
@@ -493,8 +703,10 @@ export function translateAnyToUzbek(text, langCode = 'ru') {
     if (/merhaba|selam/i.test(lower)) return "Salom! / Assalomu alaykum!";
     if (/nasılsın|nasıl gidiyor/i.test(lower)) return "Ishlaringiz qalay? / Ahvolingiz qanday?";
     if (/nerelisin/i.test(lower)) return "Qaysi shahardansiz? / Qayerdansiz?";
-    if (/ne iş yapıyorsun/i.test(lower)) return "Kasbingiz nima? / Nima ish qilasiz?";
+    if (/ne iş yapıyorsun|ne yapıyorsun/i.test(lower)) return "Kasbingiz nima? / Nima ish qilasiz?";
     if (/kahve/i.test(lower)) return "Kofe ichamizmi?";
+    if (/güzel|harika/i.test(lower)) return "Juda chiroylisiz (Kompliment)";
+    if (/aptal|salak|kes sesini/i.test(lower)) return "Sizga nisbatan qo'pollik qilinmoqda";
     return `Suhbatdosh (Turkcha): "${clean}"`;
   }
 

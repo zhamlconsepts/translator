@@ -84,7 +84,8 @@ Faqat toza JSON formatida javob ber:
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) throw new Error("Gemini javob bermadi");
 
-    const parsed = JSON.parse(rawText);
+    const cleanJson = rawText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    const parsed = JSON.parse(cleanJson);
 
     const variants = (parsed.variants && parsed.variants.length > 0) ? parsed.variants : [
       { text: clean, meaning: clean, note: "Javob" }
