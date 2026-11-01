@@ -354,7 +354,12 @@ export default function App() {
                 <span>{result?.detectedLanguage?.flag || '🇷🇺'}</span>
                 <span>{result?.isUserSpeechMode ? "Siz yozgan gap:" : `Suhbatdoshingiz (${result?.detectedLanguage?.name || 'Rus tili'}):`}</span>
               </span>
-              {isAiLoading ? (
+              {result?.isUserSpeechMode ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-brand-lime/15 text-brand-lime font-mono font-bold flex items-center gap-0.5">
+                  <Check className="w-3 h-3 text-brand-lime" />
+                  <span>To‘g‘ri mazmun tanlandi</span>
+                </span>
+              ) : isAiLoading ? (
                 <span className="text-emerald-400 text-[10px] font-mono animate-pulse">⚡ Gemini tahlil qilmoqda...</span>
               ) : interimText ? (
                 <span className="text-brand-lime animate-pulse font-medium">eshitilmoqda...</span>
@@ -516,7 +521,7 @@ export default function App() {
             onChange={(e) => setManualInput(e.target.value)}
             placeholder={
               inputMode === 'user'
-                ? `Javobingizni yozing (${TARGET_LANGUAGES.find(l => l.code === translationTargetLang)?.name || 'Ruscha'}ga tarjima qilinadi)...`
+                ? `Javobingizni yozing (xato bo'lsa ham ${TARGET_LANGUAGES.find(l => l.code === translationTargetLang)?.name || 'Ruscha'}ga to'g'ri tarjima qiladi)...`
                 : "Suhbatdosh aytgan gapni yozing..."
             }
             className="bg-transparent flex-1 text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none font-medium"
