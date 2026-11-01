@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Sparkles, Send, Laugh, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Sparkles, Send, Laugh, RotateCcw, Zap, Key, X, Check } from 'lucide-react';
 import { SpeechService } from './services/speechService';
 import { generateMultilingualResponse } from './services/multilingualBrain.js';
+import { generateGeminiSuperResponse } from './services/geminiService.js';
 import { dialogueMemory } from './services/dialogueMemory.js';
 
 // Faqat parametr tokenlarini ajratib chiroyli ko'rsatish
@@ -37,7 +38,13 @@ export default function App() {
   const [audioLevel, setAudioLevel] = useState(0);
   const [interimText, setInterimText] = useState('');
   
-  // Suhbatdosh gapi (sukut bo'yicha uchrashuvning birinchi rozilik javobidan boshlanadi)
+  // Gemini AI kaliti (localStorage'dan olinadi)
+  const [geminiApiKey, setGeminiApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [tempApiKey, setTempApiKey] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  // Suhbatdosh gapi
   const [partnerSpeech, setPartnerSpeech] = useState("Давай, не против! А что именно нужно делать?");
   const [variantIndex, setVariantIndex] = useState(0);
   const [isJokeActive, setIsJokeActive] = useState(false);
@@ -54,23 +61,44 @@ export default function App() {
 
   const speechServiceRef = useRef(null);
 
+  // AI javobini olish (Gemini agar kalit bo'lsa, aks holda tezkor Mahalliy Ong)
+  const computeResponse = async (text, vIndex, jokeMode) => {
+    if (geminiApiKey && geminiApiKey.trim()) {
+      setIsAiLoading(true);
+      try {
+        const geminiRes = await generateGeminiSuperResponse({
+          apiKey: geminiApiKey,
+          partnerSpeech: text,
+          selectedIndex: vIndex,
+          isJokeRequested: jokeMode
+        });
+        setIsAiLoading(false);
+        return geminiRes;
+      } catch (e) {
+        setIsAiLoading(false);
+        return generateMultilingualResponse(text, vIndex, jokeMode);
+      }
+    }
+    return generateMultilingualResponse(text, vIndex, jokeMode);
+  };
+
   // AI javobini yangilash
-  const updateAiResponse = (text, vIndex, jokeMode = false) => {
-    const aiResult = generateMultilingualResponse(text, vIndex, jokeMode);
+  const updateAiResponse = async (text, vIndex, jokeMode = false) => {
+    const aiResult = await computeResponse(text, vIndex, jokeMode);
     setResult(aiResult);
     setStepCount(dialogueMemory.getStepCount());
   };
 
   // Suhbatdosh gapirganda yoki yozilganda
-  const handlePartnerSpoken = (text) => {
+  const handlePartnerSpoken = async (text) => {
     if (!text || !text.trim()) return;
     const cleanText = text.trim();
     setPartnerSpeech(cleanText);
     setInterimText('');
     setVariantIndex(0);
 
-    // AI tahlili (hamma tillarda va tarixdan eslash bilan)
-    const aiResult = generateMultilingualResponse(cleanText, 0, isJokeActive);
+    // AI tahlili (hamma tillarda, bahsda yutish va tarixdan eslash bilan)
+    const aiResult = await computeResponse(cleanText, 0, isJokeActive);
     setResult(aiResult);
 
     // Xotiraga saqlash
@@ -80,9 +108,9 @@ export default function App() {
   };
 
   // Variantni tanlash
-  const handleSelectVariant = (index) => {
+  const handleSelectVariant = async (index) => {
     setVariantIndex(index);
-    const aiResult = generateMultilingualResponse(partnerSpeech, index, isJokeActive);
+    const aiResult = await computeResponse(partnerSpeech, index, isJokeActive);
     setResult(aiResult);
 
     // Xotiradagi foydalanuvchi tanlagan javobni yangilash
@@ -93,16 +121,16 @@ export default function App() {
   };
 
   // 🎭 Hazil rejimiga o'tish (Mavzuga qarab dinamik o'zgaradi!)
-  const handleToggleJoke = (e) => {
+  const handleToggleJoke = async (e) => {
     if (e) e.stopPropagation();
     const newJokeState = !isJokeActive;
     setIsJokeActive(newJokeState);
     setVariantIndex(0);
-    updateAiResponse(partnerSpeech, 0, newJokeState);
+    await updateAiResponse(partnerSpeech, 0, newJokeState);
   };
 
   // 🔄 Yangi suhbat (Tarixni tozalash va yangi suhbat ochish)
-  const handleNewConversation = () => {
+  const handleNewConversation = async () => {
     dialogueMemory.reset();
     const initialText = "Давай, не против! А что именно нужно делать?";
     setPartnerSpeech(initialText);
@@ -111,8 +139,23 @@ export default function App() {
     setManualInput('');
     setInterimText('');
     setStepCount(1);
-    const aiResult = generateMultilingualResponse(initialText, 0, false);
+    const aiResult = await computeResponse(initialText, 0, false);
     setResult(aiResult);
+  };
+
+  // Gemini kalitini saqlash
+  const handleSaveApiKey = (e) => {
+    e.preventDefault();
+    const key = tempApiKey.trim();
+    setGeminiApiKey(key);
+    if (key) {
+      localStorage.setItem('gemini_api_key', key);
+    } else {
+      localStorage.removeItem('gemini_api_key');
+    }
+    setIsApiKeyModalOpen(false);
+    // Hozirgi gapni qayta tahlil qilish
+    updateAiResponse(partnerSpeech, variantIndex, isJokeActive);
   };
 
   // Web Speech xizmati
@@ -134,7 +177,7 @@ export default function App() {
         speechServiceRef.current.stop();
       }
     };
-  }, [isJokeActive]);
+  }, [isJokeActive, geminiApiKey]);
 
   const toggleListening = () => {
     if (!speechServiceRef.current) return;
@@ -156,26 +199,46 @@ export default function App() {
   return (
     <div className="h-[100dvh] max-h-[100dvh] w-full bg-[#07090E] text-white flex flex-col justify-between selection:bg-brand-lime selection:text-black select-none overflow-hidden relative font-sans px-3 sm:px-4 py-1.5 sm:py-2">
       
-      {/* 1. YUQORI BOSHQARUV: YANGI SUHBAT VA DOIMIY GAP */}
+      {/* 1. YUQORI BOSHQARUV: GEMINI + QADAM + YANGI SUHBAT + DOIMIY GAP */}
       <div className="w-full max-w-md mx-auto shrink-0 pt-0.5 space-y-1">
         
-        {/* Yuqori panel: Qadam ko'rsatkichi + Yangi suhbat tugmasi */}
+        {/* Yuqori panel: Qadam + Gemini holati + Yangi suhbat */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[11px] font-bold text-gray-300">
-              Suhbat bosqichi: <span className="text-brand-lime">{stepCount}-qadam</span>
+              Bosqich: <span className="text-brand-lime">{stepCount}-qadam</span>
             </span>
           </div>
 
-          <button
-            onClick={handleNewConversation}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[11px] font-bold active:scale-95 transition-all shadow-sm"
-            title="Suhbat tarixini tozalash va yangi suhbat boshlash"
-          >
-            <RotateCcw className="w-3 h-3" />
-            <span>Yangi suhbat</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Gemini tugmasi */}
+            <button
+              onClick={() => {
+                setTempApiKey(geminiApiKey);
+                setIsApiKeyModalOpen(true);
+              }}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-xl border text-[10px] font-bold active:scale-95 transition-all shadow-sm ${
+                geminiApiKey
+                  ? 'bg-emerald-950/70 border-emerald-400/50 text-emerald-400'
+                  : 'bg-dark-800 border-dark-700 text-gray-400 hover:text-white'
+              }`}
+              title="Gemini Super Intellekt (Cheksiz aql va baxsda yutish)"
+            >
+              <Zap className="w-3 h-3" />
+              <span>{geminiApiKey ? "Gemini Faol" : "Gemini ulash"}</span>
+            </button>
+
+            {/* Yangi suhbat tugmasi */}
+            <button
+              onClick={handleNewConversation}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[10px] font-bold active:scale-95 transition-all shadow-sm"
+              title="Suhbat tarixini tozalash va yangi suhbat boshlash"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Yangi suhbat</span>
+            </button>
+          </div>
         </div>
 
         {/* ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Ekranda alohida turadi, umuman yo'qolmaydi) */}
@@ -202,7 +265,7 @@ export default function App() {
 
       </div>
 
-      {/* 2. JONLI TELEPROMPTER KARTASI (Ko'p tilli + Tarixdan eslash, skrollsiz!) */}
+      {/* 2. JONLI TELEPROMPTER KARTASI (Ko'p tilli + Bahsda yutish, skrollsiz!) */}
       <main className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center my-auto min-h-0 py-1">
         
         <div className="w-full rounded-3xl bg-dark-850/95 border border-dark-700/90 p-3 sm:p-4 shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col justify-between relative overflow-hidden">
@@ -214,7 +277,11 @@ export default function App() {
                 <span>{result?.detectedLanguage?.flag || '🇷🇺'}</span>
                 <span>Suhbatdoshingiz ({result?.detectedLanguage?.name || 'Rus tili'}):</span>
               </span>
-              {interimText && <span className="text-brand-lime animate-pulse font-medium">eshitilmoqda...</span>}
+              {isAiLoading ? (
+                <span className="text-emerald-400 text-[10px] font-mono animate-pulse">⚡ Gemini tahlil qilmoqda...</span>
+              ) : interimText ? (
+                <span className="text-brand-lime animate-pulse font-medium">eshitilmoqda...</span>
+              ) : null}
             </div>
 
             <p className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
@@ -227,12 +294,12 @@ export default function App() {
             </div>
           </div>
 
-          {/* B. SIZ AYTISHINGIZ KERAK BO'LGAN 100% ANIQ JAVOB VA SAVOL */}
+          {/* B. SIZ AYTISHINGIZ KERAK BO'LGAN 100% ANIQ JAVOB VA RADDIYA */}
           <div className="pt-1.5 flex-1 flex flex-col justify-center">
             <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
               <span className="text-brand-lime font-bold uppercase tracking-wider flex items-center gap-1">
                 <Sparkles className="w-3.5 h-3.5" />
-                {isJokeActive ? "Mavzuga mos Hazil:" : "Siz ayting (100% Aniq):"}
+                {isJokeActive ? "Mavzuga mos Hazil / Qora yumor:" : "Siz ayting (100% Yutib chiqish):"}
               </span>
               {result?.userNote && (
                 <span className="text-[10px] px-2 py-0.5 rounded-md bg-dark-750 text-gray-300 font-mono">
@@ -241,7 +308,7 @@ export default function App() {
               )}
             </div>
 
-            {/* Asosiy javob matni (Aniq javob + Ulovchi savol) */}
+            {/* Asosiy javob matni (Aniq javob yoki Baxsda mot qilish) */}
             <div className="py-0.5">
               <div className="text-base sm:text-xl font-extrabold text-white tracking-tight leading-snug">
                 {renderHighlightedText(result?.userResponse, false)}
@@ -255,7 +322,7 @@ export default function App() {
               </div>
             )}
 
-            {/* O'zbekcha to'liq ma'nosi (Javob + Davomiy savol ma'nosi) */}
+            {/* O'zbekcha to'liq ma'nosi */}
             <div className="mt-1.5 p-2 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 text-xs font-semibold text-brand-lime flex items-start gap-1.5">
               <span className="shrink-0 font-bold">uz Ma’nosi:</span>
               <div className="text-white font-medium leading-tight">
@@ -294,10 +361,10 @@ export default function App() {
                     ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)] font-black'
                     : 'bg-dark-750 hover:bg-dark-700 text-amber-300 border-dark-650'
                 }`}
-                title="Mavzuga mos hazilga o'tish"
+                title="Mavzuga mos hazil yoki qora yumorga o'tish"
               >
                 <Laugh className="w-3.5 h-3.5" />
-                <span>{isJokeActive ? "🔙 Asosiy javobga qaytish" : "🎭 Mavzuga mos Hazil"}</span>
+                <span>{isJokeActive ? "🔙 Asosiy javobga qaytish" : "🎭 Mavzuga mos Hazil / Qora yumor"}</span>
               </button>
 
             </div>
@@ -386,6 +453,84 @@ export default function App() {
         </p>
 
       </footer>
+
+      {/* GEMINI API KALITI MODALI */}
+      {isApiKeyModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-dark-900 border border-dark-700 rounded-3xl p-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-dark-800">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-emerald-400" />
+                <span>Gemini Super Intellekt (Cheksiz aql)</span>
+              </span>
+              <button
+                onClick={() => setIsApiKeyModalOpen(false)}
+                className="p-1 rounded-lg text-gray-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-300 mt-2 leading-relaxed">
+              Google AI Studio’dan bepul Gemini API kalitini kiritishingiz mumkin. Bu ilovani har qanday bahsda yutib chiqadigan, qora yumor va cheksiz bilimlarga ega super-intellektga aylantiradi.
+            </p>
+
+            <form onSubmit={handleSaveApiKey} className="mt-3">
+              <div className="relative">
+                <Key className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-3" />
+                <input
+                  type="password"
+                  value={tempApiKey}
+                  onChange={(e) => setTempApiKey(e.target.value)}
+                  placeholder="AIzaSy... (Gemini API kaliti)"
+                  className="w-full pl-8 pr-3 py-2 rounded-xl bg-dark-800 border border-dark-700 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-emerald-400 font-mono"
+                />
+              </div>
+
+              <div className="mt-2 flex items-center justify-between text-[10px]">
+                <a
+                  href="https://aistudio.google.com/app/apikey"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-emerald-400 underline hover:text-emerald-300"
+                >
+                  Bepul kalit olish (Google AI Studio)
+                </a>
+                {geminiApiKey && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempApiKey('');
+                      setGeminiApiKey('');
+                      localStorage.removeItem('gemini_api_key');
+                    }}
+                    className="text-red-400 hover:text-red-300"
+                  >
+                    Kalitni o'chirish
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsApiKeyModalOpen(false)}
+                  className="flex-1 py-2 rounded-xl text-xs font-semibold text-gray-400 hover:bg-dark-800"
+                >
+                  Bekor qilish
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-brand-lime text-black font-extrabold text-xs flex items-center justify-center gap-1 shadow-md"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Saqlash</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

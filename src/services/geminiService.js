@@ -1,116 +1,128 @@
 /**
- * Gemini AI Cloud Brain Service (Ixtiyoriy chuqur intellekt)
- * Agar foydalanuvchi API kalit kiritgan bo'lsa, javoblar to'g'ridan-to'g'ri Gemini modelidan olinadi.
- * Kalit kiritilmagan bo'lsa, 0-ms tezkorlikdagi ichki aqlli ong (Local Engine) ishlaydi.
+ * Gemini AI Cloud Brain Service (Cheksiz Intellekt)
+ * 
+ * Har qanday vaziyatda, bahsda, qora yumorda, kutilmagan gaplarda
+ * mukammal, o'tkir va yengilmas javoblar qaytaradi.
  */
 
-import { toPhonetic } from './conversationEngine';
+import { toPhonetic } from './conversationEngine.js';
+import { generateMultilingualResponse } from './multilingualBrain.js';
+import { dialogueMemory } from './dialogueMemory.js';
 
-export async function generateGeminiResponses({ apiKey, partnerSpeech, userGender, partnerGender, tone = 'friendly' }) {
+export async function generateGeminiSuperResponse({ apiKey, partnerSpeech, selectedIndex = 0, isJokeRequested = false }) {
   if (!apiKey || !apiKey.trim()) {
-    throw new Error("Gemini API kaliti kiritilmagan");
+    return generateMultilingualResponse(partnerSpeech, selectedIndex, isJokeRequested);
   }
 
-  const userGenderText = userGender === 'female' ? "Ayol kishi (o'zini ayol sifatida ifodalaydi: masalan 'я рада', 'я поняла')" : "Erkak kishi (o'zini erkak sifatida ifodalaydi: masalan 'я рад', 'я понял')";
-  const partnerGenderText = partnerGender === 'female' ? "Ayol kishi (unga chiroyli, muloyim murojaat)" : "Erkak kishi";
+  const clean = partnerSpeech.trim();
+  const historyTurns = dialogueMemory.getAllTurns().slice(-6);
+  const historySummary = historyTurns.map(t => `${t.speaker === 'partner' ? 'Suhbatdosh' : 'Foydalanuvchi'}: "${t.text}"`).join('\n');
 
-  const prompt = `
-Sen "SuhbatDosh" ilovasisan — jonli suhbat prompteri.
-Vazifang: Suhbatdosh aytgan gapga qarab, foydalanuvchiga ovoz chiqarib o'qib berishi uchun eng mukammal, tabiiy, zamonaviy va samimiy javob variantlarini tayyorlash.
+  const systemPrompt = `
+Sen "SuhbatDosh" ilovasining eng o'tkir, aqlli, yengilmas AI ongisan.
+Foydalanuvchi suhbatdosh bilan real hayotda jonli gaplashmoqda.
+Sening vazifang — suhbatdosh nima desa ham, foydalanuvchiga ovoz chiqarib aytishi uchun ENG ZO'R, MANTIQIY VA YENGILMAS javob tayyorlash.
 
-Suhbatdosh aytgan gap: "${partnerSpeech}"
-Foydalanuvchi jinsi: ${userGenderText}
-Suhbatdosh jinsi: ${partnerGenderText}
+Suhbatdosh gapi: "${clean}"
+${historySummary ? `Oxirgi gaplar tarixi:\n${historySummary}` : ''}
 
-Qat'iy qoidalar:
-1. Suhbatdosh gapirgan tilni aniqla (odatda Rus tili yoki Ingliz tili).
-2. O'sha tilda 4 xil ohangda javob tayyorla:
-   - friendly: Do'stona, tabiiy, iliq
-   - flirty: Qiziqarli, jozibali, suhbatni qizdiruvchi
-   - formal: Rasmiy, odobli, hurmat bilan
-   - short: Juda qisqa, londa (1-4 ta so'z)
-3. HAR BIR JAVOB TAGIGA uning to'liq O'zbekcha tarjimasini (ma'nosini) yoz.
-4. Foydalanuvchi jinsiga qat'iy rioya qil (rus tilida fe'l va sifat qo'shimchalari erkak yoki ayolga aniq moslashsin).
-5. Javobni faqat toza JSON formatida qaytar:
+QAT'IY QOIDALAR:
+1. Til: Suhbatdosh qaysi tilda gapirsa (Rus, Ingliz, Turk, O'zbek va h.k.), javob variantlarini AYNAN O'SHA TILDA yoz!
+2. Bahs va Haqorat: Agar suhbatdosh qo'pollik qilsa, kamsitsa yoki bahslashsa — uni aqlli sarkazm, o'tkir mantiq va qora yumor bilan bitta gapda MOT QIL, foydalanuvchi gapda 100% yutib chiqsin!
+3. Oddiy savollarga: Faqat aniq, londa va ishonchli javob ber (ortiqcha sun'iy savollar ulamasdan).
+4. Komplimentlarga: Chiroyli, jozibador javob qaytar va qiziqarli savol ber.
+5. Jimlik / Qisqa so'zlarda: Suhbatni qizdiruvchi ajoyib mavzu savolini taklif qil.
+6. Tarjima: HAR BIR javob tagiga uning to'liq O'ZBEKCHA ma'nosini yoz.
+7. Shaxsiy joylar: agar shahar, ism, soha bo'lsa (город), (город), (name) kabi qavsda ko'rsat.
 
+Faqat toza JSON formatida javob ber:
 {
-  "detectedLanguage": "ru",
-  "partnerMeaningUzbek": "Suhbatdosh gapining o'zbekcha ma'nosi",
-  "options": [
+  "detectedLanguage": { "code": "ru", "name": "Rus tili", "flag": "🇷🇺" },
+  "partnerMeaningUzbek": "Suhbatdosh gapining o'zbekcha tarjimasi",
+  "variants": [
     {
-      "tone": "friendly",
-      "toneName": "Do‘stona",
-      "text": "Ruscha yoki chet tilidagi javob",
-      "uzMeaning": "O'zbekcha ma'nosi"
+      "text": "1-asosiy o'tkir javob",
+      "meaning": "O'zbekcha to'liq ma'nosi",
+      "note": "Aniq javob yoki Baxsda mot qilish"
     },
     {
-      "tone": "flirty",
-      "toneName": "Qiziqarli & Jonli",
-      "text": "...",
-      "uzMeaning": "..."
-    },
-    {
-      "tone": "formal",
-      "toneName": "Rasmiy",
-      "text": "...",
-      "uzMeaning": "..."
-    },
-    {
-      "tone": "short",
-      "toneName": "Qisqa & Londa",
-      "text": "...",
-      "uzMeaning": "..."
+      "text": "2-muqobil kuchli javob",
+      "meaning": "O'zbekcha to'liq ma'nosi",
+      "note": "Sovuqqon raddiya yoki Qisqa"
     }
-  ]
+  ],
+  "joke": {
+    "text": "Vaziyatga mos qora yumor yoki o'tkir hazil",
+    "meaning": "Hazilning o'zbekcha ma'nosi",
+    "note": "O'tkir hazil"
+  }
 }
 `;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{ text: systemPrompt }]
+        }],
+        generationConfig: {
+          temperature: 0.8,
+          responseMimeType: "application/json"
+        }
+      })
+    });
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        topP: 0.95,
-        responseMimeType: "application/json"
-      }
-    })
-  });
+    if (!response.ok) {
+      console.warn(`Gemini API xatoligi (${response.status}), mahalliy ong ishlatiladi.`);
+      return generateMultilingualResponse(partnerSpeech, selectedIndex, isJokeRequested);
+    }
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error?.message || `Gemini so'rovida xatolik: ${response.status}`);
+    const data = await response.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) throw new Error("Gemini javob bermadi");
+
+    const parsed = JSON.parse(rawText);
+
+    const variants = (parsed.variants && parsed.variants.length > 0) ? parsed.variants : [
+      { text: clean, meaning: clean, note: "Javob" }
+    ];
+
+    let chosenText = variants[0].text;
+    let chosenMeaning = variants[0].meaning;
+    let chosenNote = variants[0].note;
+
+    if (isJokeRequested && parsed.joke) {
+      chosenText = parsed.joke.text;
+      chosenMeaning = parsed.joke.meaning;
+      chosenNote = parsed.joke.note;
+    } else if (selectedIndex < variants.length) {
+      chosenText = variants[selectedIndex].text;
+      chosenMeaning = variants[selectedIndex].meaning;
+      chosenNote = variants[selectedIndex].note;
+    }
+
+    const pronunciation = toPhonetic(chosenText);
+
+    return {
+      partnerText: clean,
+      partnerMeaning: parsed.partnerMeaningUzbek || "Suhbatdosh gapi",
+      detectedLanguage: parsed.detectedLanguage || { code: 'ru', name: 'Rus tili', flag: '🇷🇺' },
+      userResponse: chosenText,
+      userMeaning: chosenMeaning,
+      userPronunciation: `[${pronunciation}]`,
+      userNote: chosenNote,
+      isJoke: isJokeRequested,
+      allVariants: variants,
+      currentVariantIndex: selectedIndex % variants.length,
+      totalVariants: variants.length,
+      stepCount: dialogueMemory.getStepCount(),
+      isGemini: true
+    };
+  } catch (err) {
+    console.warn("Gemini so'rovi amalga oshmadi, mahalliy aqlli ong ishlatiladi:", err);
+    return generateMultilingualResponse(partnerSpeech, selectedIndex, isJokeRequested);
   }
-
-  const data = await response.json();
-  const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!rawText) throw new Error("Gemini javob bermadi");
-
-  const parsed = JSON.parse(rawText);
-
-  // Talaffuz qo'shish
-  const optionsWithPronunciation = (parsed.options || []).map((opt, i) => ({
-    id: `gemini-opt-${i}-${Date.now()}`,
-    tone: opt.tone,
-    toneName: opt.toneName,
-    text: opt.text,
-    uzMeaning: opt.uzMeaning,
-    pronunciation: `[${toPhonetic(opt.text)}]`
-  }));
-
-  return {
-    detectedLanguage: {
-      code: parsed.detectedLanguage || 'ru',
-      name: parsed.detectedLanguage === 'en' ? 'Ingliz tili' : 'Rus tili',
-      flag: parsed.detectedLanguage === 'en' ? '🇬🇧' : '🇷🇺'
-    },
-    partnerMeaning: parsed.partnerMeaningUzbek || "Suhbatdosh gapi",
-    options: optionsWithPronunciation
-  };
 }
-

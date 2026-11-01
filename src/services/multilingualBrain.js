@@ -160,6 +160,36 @@ const EN_DIALOGUE_MAP = [
     ]
   },
 
+  // 7. Insult / Debate comeback -> GAPDA YUTIB CHIQISH VA MOT QILISH!
+  {
+    matcher: (t) => /idiot|stupid|shut up|get lost|bullshit|nonsense|who do you think|annoying|leave me alone|fuck/i.test(t),
+    meaning: "Qo'pollik / Bahsda mot qilish va yutib chiqish",
+    responses: [
+      {
+        text: "When people run out of smart arguments, they resort to insults. Anything constructive to say?",
+        meaning: "Aqlli dalillar tugaganda haqoratga o'tishadi. Mavzu bo'yicha asosli biror gaping bormi?",
+        note: "Baxsda mot qilish"
+      },
+      {
+        text: "Your words say a lot about your manners, but nothing about me.",
+        meaning: "So'zlaring men haqimda emas, o'zingning tarbiyang haqida aytib turibdi.",
+        note: "Sovuqqon raddiya"
+      },
+      {
+        text: "Wit was never your strong suit, but thanks for trying)",
+        meaning: "O'tkir aql senga xos emasligi aniq, ammo urinish uchun rahmat)",
+        note: "Qora yumor"
+      }
+    ],
+    jokes: [
+      {
+        text: "You're trying so hard to offend me that it's almost cute) Take a breath.",
+        meaning: "Tegib ketishga shunchalik urinyapsanki, hatto kulgili) Chuqurroq nafas ol.",
+        note: "Yengil zarba"
+      }
+    ]
+  },
+
   // 7. Silence / Stalled dialogue -> TINCH BO'LIB QOLGANDA SAVOL TAKLIF QIL!
   {
     matcher: (t) => /^(?:yes|yeah|yep|sure|ok|okay|cool|nice|good|right)[\s.!?,]*$/i.test(t.trim()) || /why are you quiet|why silent|you there/i.test(t),

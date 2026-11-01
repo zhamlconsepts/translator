@@ -116,7 +116,12 @@ export function translateRussianToUzbek(text) {
     return "Nega jim bo'lib qoldingiz? / Shu yerdamisiz?";
   }
 
-  // 14. Rahmat va Xayr
+  // 14. Haqorat, Baxs, Hujum yoki Kesatish
+  if (/дурак|идиот|придурок|тупой|тупая|заткнись|пошел ты|отвали|хватит нести|че ты несешь|бред|чушь|кто ты такой|ты бесишь|надоел|отвяжись/i.test(lower)) {
+    return "Sizga nisbatan qo'pollik / baxs / hujum qilinmoqda";
+  }
+
+  // 15. Rahmat va Xayr
   if (/спасибо|благодарю|спс|от души|большое спасибо/i.test(lower)) {
     return "Rahmat! / Tashakkur!";
   }
@@ -495,7 +500,37 @@ const CONTINUITY_DIALOGUE_MAP = [
     ]
   },
 
-  // 13. KOMPLIMENT VAZIYATI (Мақтов - KOMPLIMENTDA SAVOL BERILADI!)
+  // 14. BAXS, HAQORAT VA KESATISHGA O'TKIR RADDIYA (GAPDA HAR DOIM YUTIB CHIQISH!)
+  {
+    matcher: (t) => /дурак|идиот|придурок|тупой|тупая|заткнись|пошел ты|отвали|хватит нести|че ты несешь|бред|чушь|кто ты такой|ты бесишь|надоел|отвяжись/i.test(t),
+    meaning: "Qo'pollik / Bahsda mot qilish va yutib chiqish",
+    responses: [
+      {
+        text: "Когда заканчиваются аргументы — обычно переходят на грубость. Что-то по делу скажешь?",
+        meaning: "Dalillar tugaganda odatda qo'pollikka o'tishadi. Asosli biror narsa ayta olasanmi?",
+        note: "Baxsda mot qilish"
+      },
+      {
+        text: "Твои слова говорят только о твоем уровне воспитания, не более того.",
+        meaning: "So'zlaring faqat o'zingning tarbiyang darajasini ko'rsatyapti, ortiq emas.",
+        note: "Sovuqqon raddiya"
+      },
+      {
+        text: "Остроумие явно не твой конёк, но за попытку спасибо)",
+        meaning: "O'tkir aql senga xos emasligi aniq, ammo urinish uchun rahmat)",
+        note: "Qora yumor"
+      }
+    ],
+    jokes: [
+      {
+        text: "Ты так стараешься задеть, что даже жалко становится) Давай поспокойнее.",
+        meaning: "Tegib ketishga shunchalik tirishyapsanki, hatto rahmim kelyapti) Sal bosiqroq bo'l.",
+        note: "Yengil zarba"
+      }
+    ]
+  },
+
+  // 15. KOMPLIMENT VAZIYATI (Мақтов - KOMPLIMENTDA SAVOL BERILADI!)
   {
     matcher: (t) => /красив|милая|милый|хорошо выглядит|стильно|классная|классный|красотка|красавчик/i.test(t),
     meaning: "Juda chiroylisan / Ajoyib ko'rinyapsan (Kompliment)",
