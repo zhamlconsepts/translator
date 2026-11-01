@@ -28,3 +28,4 @@ Loyihani Vercel'ga ulash uchun shunchaki repository'ni import qiling:
 - Framework Preset: `Vite`
 - Build Command: `npm run build`
 - Output Directory: `dist`
+

@@ -31,22 +31,17 @@ export function detectLanguage(text) {
     return SUPPORTED_LANGUAGES.find(l => l.code === 'kk') || SUPPORTED_LANGUAGES[0];
   }
 
-  // 3. Turk tili xos harflari yoki so'zlari
-  if (/[ğışçöü]/.test(clean) || /\b(merhaba|nasılsın|evet|hayır|teşekkür|günaydın|tamam|güzel)\b/i.test(clean)) {
-    return SUPPORTED_LANGUAGES.find(l => l.code === 'tr') || SUPPORTED_LANGUAGES[0];
-  }
-
-  // 4. Kirill alifbosi (Rus vs O'zbek kirill vs boshqalar)
+  // 3. Kirill alifbosi (Rus vs O'zbek kirill vs boshqalar)
   if (/[а-яё]/i.test(clean)) {
-    // Agar rus tiliga xos harflar yoki so'zlar bo'lsa
-    if (/[ыэъё]/i.test(clean) || /\b(привет|как|дела|что|это|да|нет|спасибо|пожалуйста|почему|куда|хорошо|здравствуйте|пока|конечно|правда|ладно|отлично|красиво|где|когда|хочу|будет|можно)\b/i.test(clean)) {
-      return SUPPORTED_LANGUAGES.find(l => l.code === 'ru') || SUPPORTED_LANGUAGES[0];
-    }
-    // O'zbek kirill xos so'zlari
-    if (/\b(салом|рахмат|яхши|кандай|нима|бу|учун|болади|майли)\b/i.test(clean)) {
+    if (/\b(салом|рахмат|яхши|кандай|нима|бу|учун|болади|майли|каерда|билмайман)\b/i.test(clean)) {
       return SUPPORTED_LANGUAGES.find(l => l.code === 'uz') || SUPPORTED_LANGUAGES[0];
     }
     return SUPPORTED_LANGUAGES.find(l => l.code === 'ru') || SUPPORTED_LANGUAGES[0];
+  }
+
+  // 4. Turk tili xos harflari yoki so'zlari
+  if (/[ğışçöü]/.test(clean) || /\b(merhaba|nasılsın|evet|hayır|teşekkür|günaydın|tamam|güzel|neredesin|nerelisin)\b/i.test(clean)) {
+    return SUPPORTED_LANGUAGES.find(l => l.code === 'tr') || SUPPORTED_LANGUAGES[0];
   }
 
   // 5. Nemis tili xos harflar / so'zlar
@@ -64,17 +59,16 @@ export function detectLanguage(text) {
     return SUPPORTED_LANGUAGES.find(l => l.code === 'es') || SUPPORTED_LANGUAGES[0];
   }
 
-  // 8. O'zbek tili (Lotin)
-  if (/[oʻo‘gʻg‘]/.test(clean) || /\b(salom|qalay|qalaysiz|rahmat|yaxshi|nima|qanday|qachon|qayerda|ha|yo‘q|yoq|iltimos|zo‘r|zor|ishlar|kel|ketdik|mayli|tushundim)\b/i.test(clean)) {
-    return SUPPORTED_LANGUAGES.find(l => l.code === 'uz') || SUPPORTED_LANGUAGES[0];
-  }
-
-  // 9. Ingliz tili (Latin)
-  if (/\b(hello|hi|hey|how|are|you|what|doing|good|morning|fine|thanks|thank|yes|no|cool|awesome|where|why|who|please|sure|nice|meet|see)\b/i.test(clean)) {
+  // 8. Ingliz tili (Latin)
+  if (/\b(the|is|are|you|from|what|how|where|which|city|who|when|have|can|will|do|did|with|for|at|in|on|to|and|my|your|we|they|hello|hi|hey|good|morning|fine|thanks|thank|yes|no|cool|awesome|please|sure|nice|meet|see)\b/i.test(clean)) {
     return SUPPORTED_LANGUAGES.find(l => l.code === 'en') || SUPPORTED_LANGUAGES[0];
   }
 
-  // Standart holatda ingliz yoki rus
-  return SUPPORTED_LANGUAGES[0];
-}
+  // 9. O'zbek tili (Lotin: o'ziga xos so'zlar yoki o', g' harflari)
+  if (/(?:[og]['`ʻ‘]|[‘`ʻ])/i.test(clean) || /\b(salom|qalay|qalaysiz|rahmat|yaxshi|nima|qanday|qachon|qayerda|ha|yo‘q|yoq|iltimos|zo‘r|zor|ishlar|kel|ketdik|mayli|tushundim|bormisiz|boladi)\b/i.test(clean)) {
+    return SUPPORTED_LANGUAGES.find(l => l.code === 'uz') || SUPPORTED_LANGUAGES[0];
+  }
 
+  // Standart holatda ingliz yoki rus
+  return SUPPORTED_LANGUAGES[1]; // Default to English for unrecognized latin text
+}

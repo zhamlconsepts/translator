@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Sparkles, Send, Laugh } from 'lucide-react';
+import { Mic, MicOff, Sparkles, Send, Laugh, RotateCcw } from 'lucide-react';
 import { SpeechService } from './services/speechService';
-import { generateAcquaintanceResponse } from './services/nativeBrain.js';
+import { generateMultilingualResponse } from './services/multilingualBrain.js';
+import { dialogueMemory } from './services/dialogueMemory.js';
 
 // Faqat parametr tokenlarini ajratib chiroyli ko'rsatish
 function renderHighlightedText(text, isUzbek = false) {
   if (!text) return '';
-  const pattern = /(\((?:страна|город|возраст|имя|сфера|ответ|davlat|shahar|yosh|ism|soha|javob)\))/gi;
+  const pattern = /(\((?:страна|город|возраст|имя|сфера|ответ|country|city|age|name|field|answer|davlat|shahar|yosh|ism|soha|javob)\))/gi;
   const parts = text.split(pattern);
   return parts.map((part, idx) => {
-    if (/^\((?:страна|город|возраст|имя|сфера|ответ|davlat|shahar|yosh|ism|soha|javob)\)$/i.test(part)) {
+    if (/^\((?:страна|город|возраст|имя|сфера|ответ|country|city|age|name|field|answer|davlat|shahar|yosh|ism|soha|javob)\)$/i.test(part)) {
       return (
         <span
           key={idx}
@@ -30,7 +31,6 @@ function renderHighlightedText(text, isUzbek = false) {
 // ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Umuman yo'qolmaydi)
 const PERMANENT_OPENER_RU = "Привет! Я тестирую своё новое приложение. Ты не против продолжить диалог со мной для проверки его работы?";
 const PERMANENT_OPENER_UZ = "Salom! Yangi ilovamni test qilyapman. Uning ishlashini tekshirish uchun suhbatlashishga qarshi emasmisan?";
-const PERMANENT_OPENER_PHONETIC = "[Privet! Ya testiruyu svoyo novoye prilojeniye. Ti ne protiv prodoljit dialog so mnoy dlya proverki yego raboti?]";
 
 export default function App() {
   const [isListening, setIsListening] = useState(false);
@@ -41,35 +41,55 @@ export default function App() {
   const [partnerSpeech, setPartnerSpeech] = useState("Давай, не против! А что именно нужно делать?");
   const [variantIndex, setVariantIndex] = useState(0);
   const [isJokeActive, setIsJokeActive] = useState(false);
+  const [stepCount, setStepCount] = useState(1);
   
   // Yozib sinash qatori (ekranda doim turadi)
   const [manualInput, setManualInput] = useState('');
 
-  // AI tahlil natijasi (Mantiqiy, 100% to'g'ri va ulovchi savolli)
-  const [result, setResult] = useState(() => generateAcquaintanceResponse("Давай, не против! А что именно нужно делать?", 0, false));
+  // AI tahlil natijasi (Ko'p tilli va xotirali intellekt)
+  const [result, setResult] = useState(() => {
+    dialogueMemory.reset();
+    return generateMultilingualResponse("Давай, не против! А что именно нужно делать?", 0, false);
+  });
 
   const speechServiceRef = useRef(null);
 
   // AI javobini yangilash
   const updateAiResponse = (text, vIndex, jokeMode = false) => {
-    const aiResult = generateAcquaintanceResponse(text, vIndex, jokeMode);
+    const aiResult = generateMultilingualResponse(text, vIndex, jokeMode);
     setResult(aiResult);
+    setStepCount(dialogueMemory.getStepCount());
   };
 
   // Suhbatdosh gapirganda yoki yozilganda
   const handlePartnerSpoken = (text) => {
     if (!text || !text.trim()) return;
-    setPartnerSpeech(text);
+    const cleanText = text.trim();
+    setPartnerSpeech(cleanText);
     setInterimText('');
     setVariantIndex(0);
-    // Suhbatdosh gapini yangilaganda, agar hazil rejimi bo'lsa yangi mavzuga mos hazilga o'tadi
-    updateAiResponse(text, 0, isJokeActive);
+
+    // AI tahlili (hamma tillarda va tarixdan eslash bilan)
+    const aiResult = generateMultilingualResponse(cleanText, 0, isJokeActive);
+    setResult(aiResult);
+
+    // Xotiraga saqlash
+    dialogueMemory.addTurn('partner', cleanText, aiResult.partnerMeaning, aiResult.detectedLanguage?.code);
+    dialogueMemory.addTurn('user', aiResult.userResponse, aiResult.userMeaning, aiResult.detectedLanguage?.code);
+    setStepCount(dialogueMemory.getStepCount());
   };
 
   // Variantni tanlash
   const handleSelectVariant = (index) => {
     setVariantIndex(index);
-    updateAiResponse(partnerSpeech, index, isJokeActive);
+    const aiResult = generateMultilingualResponse(partnerSpeech, index, isJokeActive);
+    setResult(aiResult);
+
+    // Xotiradagi foydalanuvchi tanlagan javobni yangilash
+    if (dialogueMemory.history.length > 0 && dialogueMemory.history[dialogueMemory.history.length - 1].speaker === 'user') {
+      dialogueMemory.history[dialogueMemory.history.length - 1].text = aiResult.userResponse;
+      dialogueMemory.history[dialogueMemory.history.length - 1].meaning = aiResult.userMeaning;
+    }
   };
 
   // 🎭 Hazil rejimiga o'tish (Mavzuga qarab dinamik o'zgaradi!)
@@ -79,6 +99,20 @@ export default function App() {
     setIsJokeActive(newJokeState);
     setVariantIndex(0);
     updateAiResponse(partnerSpeech, 0, newJokeState);
+  };
+
+  // 🔄 Yangi suhbat (Tarixni tozalash va yangi suhbat ochish)
+  const handleNewConversation = () => {
+    dialogueMemory.reset();
+    const initialText = "Давай, не против! А что именно нужно делать?";
+    setPartnerSpeech(initialText);
+    setVariantIndex(0);
+    setIsJokeActive(false);
+    setManualInput('');
+    setInterimText('');
+    setStepCount(1);
+    const aiResult = generateMultilingualResponse(initialText, 0, false);
+    setResult(aiResult);
   };
 
   // Web Speech xizmati
@@ -122,33 +156,53 @@ export default function App() {
   return (
     <div className="h-[100dvh] max-h-[100dvh] w-full bg-[#07090E] text-white flex flex-col justify-between selection:bg-brand-lime selection:text-black select-none overflow-hidden relative font-sans px-3 sm:px-4 py-1.5 sm:py-2">
       
-      {/* 1. ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Ekranda alohida turadi, umuman yo'qolmaydi) */}
-      <div className="w-full max-w-md mx-auto shrink-0 pt-0.5">
-        <div className="w-full rounded-2xl bg-gradient-to-r from-dark-800 to-dark-850 border border-brand-lime/35 p-2.5 shadow-lg backdrop-blur-md">
-          <div className="flex items-center justify-between text-[10px] text-brand-lime font-bold uppercase tracking-wider mb-1">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-brand-lime animate-pulse" />
-              Siz aytadigan Boshlang‘ich Gap:
+      {/* 1. YUQORI BOSHQARUV: YANGI SUHBAT VA DOIMIY GAP */}
+      <div className="w-full max-w-md mx-auto shrink-0 pt-0.5 space-y-1">
+        
+        {/* Yuqori panel: Qadam ko'rsatkichi + Yangi suhbat tugmasi */}
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[11px] font-bold text-gray-300">
+              Suhbat bosqichi: <span className="text-brand-lime">{stepCount}-qadam</span>
             </span>
-            <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-lime/15 text-brand-lime font-mono border border-brand-lime/30 font-bold">
+          </div>
+
+          <button
+            onClick={handleNewConversation}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[11px] font-bold active:scale-95 transition-all shadow-sm"
+            title="Suhbat tarixini tozalash va yangi suhbat boshlash"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Yangi suhbat</span>
+          </button>
+        </div>
+
+        {/* ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Ekranda alohida turadi, umuman yo'qolmaydi) */}
+        <div className="w-full rounded-2xl bg-gradient-to-r from-dark-800 to-dark-850 border border-brand-lime/35 p-2 sm:p-2.5 shadow-md backdrop-blur-md">
+          <div className="flex items-center justify-between text-[10px] text-brand-lime font-bold uppercase tracking-wider mb-0.5">
+            <span className="flex items-center gap-1">
+              <span>🎯</span>
+              <span>Siz aytadigan Boshlang‘ich Gap:</span>
+            </span>
+            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-brand-lime/15 text-brand-lime font-mono border border-brand-lime/30 font-bold">
               DOIMIY
             </span>
           </div>
 
-          {/* Doimiy aytiladigan gap */}
-          <p className="text-xs sm:text-sm font-extrabold text-white leading-snug">
+          <p className="text-xs sm:text-[13px] font-extrabold text-white leading-snug">
             "{PERMANENT_OPENER_RU}"
           </p>
 
-          {/* O'zbekcha tarjimasi */}
-          <div className="mt-1 text-[11px] text-brand-lilac flex items-center gap-1.5 font-medium leading-tight">
+          <div className="mt-0.5 text-[10px] sm:text-[11px] text-brand-lilac flex items-center gap-1 font-medium leading-tight">
             <span className="font-bold text-brand-purple shrink-0">uz:</span>
-            <span>{PERMANENT_OPENER_UZ}</span>
+            <span className="truncate">{PERMANENT_OPENER_UZ}</span>
           </div>
         </div>
+
       </div>
 
-      {/* 2. JONLI TELEPROMPTER KARTASI (Suhbat davomi, skrollsiz, to'liq ekran!) */}
+      {/* 2. JONLI TELEPROMPTER KARTASI (Ko'p tilli + Tarixdan eslash, skrollsiz!) */}
       <main className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center my-auto min-h-0 py-1">
         
         <div className="w-full rounded-3xl bg-dark-850/95 border border-dark-700/90 p-3 sm:p-4 shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col justify-between relative overflow-hidden">
@@ -158,7 +212,7 @@ export default function App() {
             <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
               <span className="font-semibold text-gray-300 flex items-center gap-1">
                 <span>{result?.detectedLanguage?.flag || '🇷🇺'}</span>
-                <span>Suhbatdoshingiz javobi:</span>
+                <span>Suhbatdoshingiz ({result?.detectedLanguage?.name || 'Rus tili'}):</span>
               </span>
               {interimText && <span className="text-brand-lime animate-pulse font-medium">eshitilmoqda...</span>}
             </div>
@@ -253,14 +307,14 @@ export default function App() {
 
       </main>
 
-      {/* 3. TEST YOZISH OYNCHASI (Ekranda doim turadi, namunalar yo'q) */}
+      {/* 3. TEST YOZISH OYNCHASI (Ekranda doim turadi, istalgan tilda kiritish mumkin) */}
       <div className="w-full max-w-md mx-auto shrink-0 pt-0.5 pb-1">
         <form onSubmit={handleManualSubmit} className="flex items-center gap-1.5 bg-dark-800/95 border border-dark-700/90 rounded-2xl px-3 py-1.5 focus-within:border-brand-lime shadow-inner">
           <input
             type="text"
             value={manualInput}
             onChange={(e) => setManualInput(e.target.value)}
-            placeholder="Suhbatdosh javobini yozing (Masalan: Чем ты занимаешься?)..."
+            placeholder="Suhbatdosh javobini yozing (istalgan tilda)..."
             className="bg-transparent flex-1 text-xs text-white placeholder-gray-500 focus:outline-none"
           />
           <button
