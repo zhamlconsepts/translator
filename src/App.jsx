@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Sparkles, Send, Laugh, RotateCcw, Zap, Key, X, Check, Globe, MessageSquareQuote, PenTool } from 'lucide-react';
 import { SpeechService } from './services/speechService';
-import { generateMultilingualResponse } from './services/multilingualBrain.js';
+import { generateMultilingualResponse, DEFAULT_PARTNER_SPEECH } from './services/multilingualBrain.js';
 import { generateGeminiSuperResponse } from './services/geminiService.js';
 import { dialogueMemory } from './services/dialogueMemory.js';
 import { toPhonetic } from './services/conversationEngine.js';
@@ -31,10 +31,6 @@ function renderHighlightedText(text, isUzbek = false) {
   });
 }
 
-// ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Umuman yo'qolmaydi)
-const PERMANENT_OPENER_RU = "Привет! Я тестирую своё новое приложение. Ты не против продолжить диалог со мной для проверки его работы?";
-const PERMANENT_OPENER_UZ = "Salom! Yangi ilovamni test qilyapman. Uning ishlashini tekshirish uchun suhbatlashishga qarshi emasmisan?";
-
 export default function App() {
   const [isListening, setIsListening] = useState(false);
   const [audioLevel, setAudioLevel] = useState(0);
@@ -52,7 +48,7 @@ export default function App() {
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Suhbatdosh gapi
-  const [partnerSpeech, setPartnerSpeech] = useState("Давай, не против! А что именно нужно делать?");
+  const [partnerSpeech, setPartnerSpeech] = useState(DEFAULT_PARTNER_SPEECH.ru);
   const [variantIndex, setVariantIndex] = useState(0);
   const [isJokeActive, setIsJokeActive] = useState(false);
   const [stepCount, setStepCount] = useState(1);
@@ -63,22 +59,37 @@ export default function App() {
   // AI tahlil natijasi (Ko'p tilli va xotirali intellekt)
   const [result, setResult] = useState(() => {
     dialogueMemory.reset();
-    return generateMultilingualResponse("Давай, не против! А что именно нужно делать?", 0, false);
+    return generateMultilingualResponse(DEFAULT_PARTNER_SPEECH.ru, 0, false, 'ru');
   });
 
   const speechServiceRef = useRef(null);
 
-  // Nutq tili o'zgarganda
-  const handleSpeechLangChange = (code) => {
+  // Nutq tili o'zgarganda — BARChA NARSA USHBU TILGA MOSLASHADI (lekin tarjima qilinadigan joyi o'zgarmaydi!)
+  const handleSpeechLangChange = async (code) => {
     setActiveSpeechLang(code);
     const langObj = TARGET_LANGUAGES.find(l => l.code === code);
     if (speechServiceRef.current && langObj) {
       speechServiceRef.current.setLanguage(langObj.speechCode);
     }
+
+    // Suhbatdosh gapi ushbu tilga o'tadi
+    const newSpeech = DEFAULT_PARTNER_SPEECH[code] || DEFAULT_PARTNER_SPEECH.ru;
+    setPartnerSpeech(newSpeech);
+    setVariantIndex(0);
+    setInterimText('');
+    setManualInput('');
+    dialogueMemory.reset();
+
+    // AI tahlili ushbu til uchun yangilanadi
+    const aiResult = await computeResponse(newSpeech, 0, isJokeActive, code);
+    setResult(aiResult);
+    dialogueMemory.addTurn('partner', newSpeech, aiResult.partnerMeaning, code);
+    dialogueMemory.addTurn('user', aiResult.userResponse, aiResult.userMeaning, code);
+    setStepCount(dialogueMemory.getStepCount());
   };
 
   // AI javobini olish (Gemini agar kalit bo'lsa, aks holda tezkor Mahalliy Ong)
-  const computeResponse = async (text, vIndex, jokeMode) => {
+  const computeResponse = async (text, vIndex, jokeMode, langCode = activeSpeechLang) => {
     if (geminiApiKey && geminiApiKey.trim()) {
       setIsAiLoading(true);
       try {
@@ -86,21 +97,22 @@ export default function App() {
           apiKey: geminiApiKey,
           partnerSpeech: text,
           selectedIndex: vIndex,
-          isJokeRequested: jokeMode
+          isJokeRequested: jokeMode,
+          languageCode: langCode
         });
         setIsAiLoading(false);
         return geminiRes;
       } catch (e) {
         setIsAiLoading(false);
-        return generateMultilingualResponse(text, vIndex, jokeMode);
+        return generateMultilingualResponse(text, vIndex, jokeMode, langCode);
       }
     }
-    return generateMultilingualResponse(text, vIndex, jokeMode);
+    return generateMultilingualResponse(text, vIndex, jokeMode, langCode);
   };
 
   // AI javobini yangilash
-  const updateAiResponse = async (text, vIndex, jokeMode = false) => {
-    const aiResult = await computeResponse(text, vIndex, jokeMode);
+  const updateAiResponse = async (text, vIndex, jokeMode = false, langCode = activeSpeechLang) => {
+    const aiResult = await computeResponse(text, vIndex, jokeMode, langCode);
     setResult(aiResult);
     setStepCount(dialogueMemory.getStepCount());
   };
@@ -113,13 +125,13 @@ export default function App() {
     setInterimText('');
     setVariantIndex(0);
 
-    // AI tahlili (hamma tillarda, bahsda yutish va tarixdan eslash bilan)
-    const aiResult = await computeResponse(cleanText, 0, isJokeActive);
+    // AI tahlili (barcha tillarda, bahsda yutish va tarixdan eslash bilan)
+    const aiResult = await computeResponse(cleanText, 0, isJokeActive, activeSpeechLang);
     setResult(aiResult);
 
     // Xotiraga saqlash
-    dialogueMemory.addTurn('partner', cleanText, aiResult.partnerMeaning, aiResult.detectedLanguage?.code);
-    dialogueMemory.addTurn('user', aiResult.userResponse, aiResult.userMeaning, aiResult.detectedLanguage?.code);
+    dialogueMemory.addTurn('partner', cleanText, aiResult.partnerMeaning, aiResult.detectedLanguage?.code || activeSpeechLang);
+    dialogueMemory.addTurn('user', aiResult.userResponse, aiResult.userMeaning, aiResult.detectedLanguage?.code || activeSpeechLang);
     setStepCount(dialogueMemory.getStepCount());
   };
 
@@ -160,15 +172,17 @@ export default function App() {
   // 🔄 Yangi suhbat (Tarixni tozalash va yangi suhbat ochish)
   const handleNewConversation = async () => {
     dialogueMemory.reset();
-    const initialText = "Давай, не против! А что именно нужно делать?";
+    const initialText = DEFAULT_PARTNER_SPEECH[activeSpeechLang] || DEFAULT_PARTNER_SPEECH.ru;
     setPartnerSpeech(initialText);
     setVariantIndex(0);
     setIsJokeActive(false);
     setManualInput('');
     setInterimText('');
     setStepCount(1);
-    const aiResult = await computeResponse(initialText, 0, false);
+    const aiResult = await computeResponse(initialText, 0, false, activeSpeechLang);
     setResult(aiResult);
+    dialogueMemory.addTurn('partner', initialText, aiResult.partnerMeaning, activeSpeechLang);
+    dialogueMemory.addTurn('user', aiResult.userResponse, aiResult.userMeaning, activeSpeechLang);
   };
 
   // Gemini kalitini saqlash
@@ -309,54 +323,31 @@ export default function App() {
             {/* Yangi suhbat tugmasi */}
             <button
               onClick={handleNewConversation}
-              className="flex items-center gap-1 px-2 py-1 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[10px] font-bold active:scale-95 transition-all shadow-sm"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-dark-800 hover:bg-dark-750 border border-brand-lime/30 text-brand-lime text-[11px] font-bold active:scale-95 transition-all shadow-sm"
               title="Suhbat tarixini tozalash va yangi suhbat boshlash"
             >
-              <RotateCcw className="w-3 h-3" />
+              <RotateCcw className="w-3.5 h-3.5" />
               <span>Yangi</span>
             </button>
           </div>
         </div>
-
-        {/* ALOHIDA VA DOIMIY BOSHLANG'ICH GAP (Doim ko'rinib turadi) */}
-        <div className="w-full rounded-2xl bg-gradient-to-r from-dark-800 to-dark-850 border border-brand-lime/35 p-2 sm:p-2.5 shadow-md backdrop-blur-md">
-          <div className="flex items-center justify-between text-[10px] text-brand-lime font-bold uppercase tracking-wider mb-0.5">
-            <span className="flex items-center gap-1">
-              <span>🎯</span>
-              <span>Siz aytadigan Boshlang‘ich Gap:</span>
-            </span>
-            <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-brand-lime/15 text-brand-lime font-mono border border-brand-lime/30 font-bold">
-              DOIMIY
-            </span>
-          </div>
-
-          <p className="text-xs sm:text-[13px] font-extrabold text-white leading-snug">
-            "{PERMANENT_OPENER_RU}"
-          </p>
-
-          <div className="mt-0.5 text-[10px] sm:text-[11px] text-brand-lilac flex items-center gap-1 font-medium leading-tight">
-            <span className="font-bold text-brand-purple shrink-0">uz:</span>
-            <span className="truncate">{PERMANENT_OPENER_UZ}</span>
-          </div>
-        </div>
-
       </header>
 
       {/* 2. JONLI TELEPROMPTER KARTASI (Ko'z ilg'aydigan, keng va qulay!) */}
-      <main className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center my-auto min-h-0 py-1 sm:py-2">
+      <main className="w-full max-w-md mx-auto flex-1 flex flex-col justify-center my-auto min-h-0 py-1.5 sm:py-2.5">
         
-        <div className="w-full rounded-3xl bg-dark-850/95 border border-dark-700/90 p-3 sm:p-4 shadow-[0_15px_40px_rgba(0,0,0,0.8)] backdrop-blur-xl flex flex-col justify-between relative overflow-hidden">
+        <div className="w-full rounded-3xl bg-dark-850/95 border border-dark-700/90 p-3.5 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.85)] backdrop-blur-xl flex flex-col justify-between relative overflow-hidden">
           
           {/* A. Suhbatdosh aytgan gap va uning o'zbekcha tarjimasi */}
-          <div className="pb-2 border-b border-dark-700/60 shrink-0">
-            <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
-              <span className="font-semibold text-gray-300 flex items-center gap-1">
-                <span>{result?.detectedLanguage?.flag || '🇷🇺'}</span>
+          <div className="pb-2.5 border-b border-dark-700/60 shrink-0">
+            <div className="flex items-center justify-between text-[11px] text-gray-400 mb-1">
+              <span className="font-semibold text-gray-300 flex items-center gap-1.5">
+                <span className="text-sm">{result?.detectedLanguage?.flag || '🇷🇺'}</span>
                 <span>{result?.isUserSpeechMode ? "Siz yozgan gap:" : `Suhbatdoshingiz (${result?.detectedLanguage?.name || 'Rus tili'}):`}</span>
               </span>
               {result?.isUserSpeechMode ? (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-brand-lime/15 text-brand-lime font-mono font-bold flex items-center gap-0.5">
-                  <Check className="w-3 h-3 text-brand-lime" />
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-brand-lime/15 text-brand-lime font-mono font-bold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-brand-lime" />
                   <span>To‘g‘ri mazmun tanlandi</span>
                 </span>
               ) : isAiLoading ? (
@@ -366,20 +357,20 @@ export default function App() {
               ) : null}
             </div>
 
-            <p className="text-sm sm:text-base font-bold text-white leading-snug line-clamp-2">
+            <p className="text-base sm:text-lg font-bold text-white leading-snug line-clamp-2">
               "{interimText ? interimText : (result?.partnerText || partnerSpeech)}"
             </p>
 
-            <div className="mt-0.5 text-xs text-brand-lilac flex items-center gap-1.5 font-medium">
+            <div className="mt-1 text-xs sm:text-[13px] text-brand-lilac flex items-center gap-1.5 font-medium">
               <span className="font-bold text-brand-purple shrink-0">uz:</span>
               <span className="line-clamp-2">{result?.partnerMeaning}</span>
             </div>
           </div>
 
           {/* B. SIZ AYTISHINGIZ KERAK BO'LGAN 100% ANIQ JAVOB / TARJIMA */}
-          <div className="pt-2 flex-1 flex flex-col justify-center">
-            <div className="flex items-center justify-between text-[11px] text-gray-400 mb-0.5">
-              <span className="text-brand-lime font-bold uppercase tracking-wider flex items-center gap-1">
+          <div className="pt-2.5 flex-1 flex flex-col justify-center">
+            <div className="flex items-center justify-between text-[11px] text-gray-400 mb-1">
+              <span className="text-brand-lime font-bold uppercase tracking-wider flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" />
                 {isJokeActive 
                   ? "Mavzuga mos Hazil / Qora yumor:" 
@@ -393,39 +384,39 @@ export default function App() {
             </div>
 
             {/* Asosiy javob matni (Aniq, katta, ko'z ilg'aydigan font) */}
-            <div className="py-1">
-              <div className="text-lg sm:text-2xl font-black text-white tracking-tight leading-snug">
+            <div className="py-1 sm:py-2">
+              <div className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
                 {renderHighlightedText(result?.userResponse, false)}
               </div>
             </div>
 
             {/* Lotincha talaffuzi */}
             {result?.userPronunciation && (
-              <div className="text-[11px] sm:text-xs text-gray-400 font-mono truncate mt-0.5">
+              <div className="text-xs text-gray-400 font-mono truncate mt-0.5">
                 {result.userPronunciation}
               </div>
             )}
 
             {/* O'zbekcha to'liq ma'nosi */}
-            <div className="mt-2 p-2.5 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 text-xs sm:text-sm font-semibold text-brand-lime flex items-start gap-1.5">
-              <span className="shrink-0 font-bold">uz Ma’nosi:</span>
-              <div className="text-white font-medium leading-tight">
+            <div className="mt-2.5 p-3 rounded-2xl bg-brand-lime/10 border border-brand-lime/20 text-xs sm:text-sm font-semibold text-brand-lime flex items-start gap-2">
+              <span className="shrink-0 font-bold">uz:</span>
+              <div className="text-white font-medium leading-snug">
                 {renderHighlightedText(result?.userMeaning, true)}
               </div>
             </div>
 
             {/* C. VARIANTLAR VA MAVZUGA MOS HAZILGA O'TISH */}
-            <div className="mt-2.5 pt-1.5 border-t border-dark-700/60 shrink-0">
+            <div className="mt-3 pt-2 border-t border-dark-700/60 shrink-0">
               
               {/* Variantlar tugmalari */}
-              <div className="flex items-center gap-1.5 mb-1.5 overflow-x-auto no-scrollbar">
+              <div className="flex items-center gap-1.5 mb-2 overflow-x-auto no-scrollbar">
                 {result?.allVariants?.map((v, idx) => {
                   const isSelected = idx === result?.currentVariantIndex;
                   return (
                     <button
                       key={idx}
                       onClick={() => handleSelectVariant(idx)}
-                      className={`flex-1 py-1 px-2 rounded-xl border text-[10px] sm:text-[11px] font-bold transition-all text-center truncate active:scale-98 ${
+                      className={`flex-1 py-1 px-2.5 rounded-xl border text-[11px] font-bold transition-all text-center truncate active:scale-98 ${
                         isSelected
                           ? 'bg-brand-lime text-black border-brand-lime shadow-sm'
                           : 'bg-dark-800 hover:bg-dark-750 text-gray-300 border-dark-700'
@@ -440,14 +431,14 @@ export default function App() {
               {/* Mavzuga qarab dinamik o'zgaruvchi Hazil tugmasi */}
               <button
                 onClick={handleToggleJoke}
-                className={`w-full py-1.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-all active:scale-98 ${
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-2 border transition-all active:scale-98 ${
                   isJokeActive
-                    ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.5)] font-black'
+                    ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.5)] font-black'
                     : 'bg-dark-750 hover:bg-dark-700 text-amber-300 border-dark-650'
                 }`}
                 title="Mavzuga mos hazil yoki qora yumorga o'tish"
               >
-                <Laugh className="w-3.5 h-3.5" />
+                <Laugh className="w-4 h-4" />
                 <span>{isJokeActive ? "🔙 Asosiy javobga qaytish" : "🎭 Mavzuga mos Hazil / Qora yumor"}</span>
               </button>
 
@@ -529,33 +520,33 @@ export default function App() {
           <button
             type="submit"
             disabled={!manualInput.trim()}
-            className="p-1.5 sm:p-2 rounded-xl bg-brand-lime text-black hover:bg-lime-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none shrink-0"
+            className="p-2 sm:p-2.5 rounded-xl bg-brand-lime text-black hover:bg-lime-400 active:scale-95 transition-all disabled:opacity-30 disabled:pointer-events-none shrink-0 font-bold shadow-md"
             title={inputMode === 'user' ? "Tarjima qilib ekranga chiqarish" : "AI tahlil qilish"}
           >
-            <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <Send className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </button>
         </form>
       </section>
 
-      {/* 4. PASTKI QISM: MIKROFON (Skroll yo'q, quloqqa va bosh barmog'iga yaqin) */}
-      <footer className="w-full max-w-md mx-auto shrink-0 pt-0.5 pb-1 flex flex-col items-center justify-center z-20">
+      {/* 4. PASTKI QISM: KATTA VA KO'Z ILG'AYDIGAN SHAZAM MIKROFON TUGMASI */}
+      <footer className="w-full max-w-md mx-auto shrink-0 pt-1 pb-1.5 flex flex-col items-center justify-center z-20">
         
         {/* KATTA SHAZAM MIKROFON TUGMASI */}
         <div className="relative flex items-center justify-center">
           {isListening && (
             <>
               <div
-                className="absolute rounded-full bg-brand-lime/25 animate-ping pointer-events-none"
+                className="absolute rounded-full bg-brand-lime/30 animate-ping pointer-events-none"
                 style={{
-                  width: `${75 + audioLevel * 60}px`,
-                  height: `${75 + audioLevel * 60}px`
+                  width: `${95 + audioLevel * 75}px`,
+                  height: `${95 + audioLevel * 75}px`
                 }}
               />
               <div
-                className="absolute rounded-full bg-emerald-500/20 blur-xl pointer-events-none transition-all duration-150"
+                className="absolute rounded-full bg-emerald-500/25 blur-xl pointer-events-none transition-all duration-150"
                 style={{
-                  width: `${90 + audioLevel * 50}px`,
-                  height: `${90 + audioLevel * 50}px`
+                  width: `${120 + audioLevel * 70}px`,
+                  height: `${120 + audioLevel * 70}px`
                 }}
               />
             </>
@@ -563,21 +554,21 @@ export default function App() {
 
           <button
             onClick={toggleListening}
-            className={`relative z-10 w-16 h-16 sm:w-20 sm:h-20 rounded-full flex flex-col items-center justify-center transition-all duration-300 active:scale-95 shadow-2xl ${
+            className={`relative z-10 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex flex-col items-center justify-center transition-all duration-300 active:scale-95 shadow-2xl ${
               isListening
-                ? 'bg-gradient-to-tr from-emerald-500 to-brand-lime text-black shadow-[0_0_35px_rgba(210,255,58,0.55)] ring-4 ring-brand-lime/40'
-                : 'bg-dark-800 hover:bg-dark-750 text-white border-2 border-brand-lime/40 shadow-[0_0_20px_rgba(210,255,58,0.2)] hover:border-brand-lime'
+                ? 'bg-gradient-to-tr from-emerald-500 to-brand-lime text-black shadow-[0_0_40px_rgba(210,255,58,0.7)] ring-4 ring-brand-lime/50'
+                : 'bg-dark-800 hover:bg-dark-750 text-white border-2 border-brand-lime/50 shadow-[0_0_25px_rgba(210,255,58,0.25)] hover:border-brand-lime'
             }`}
           >
             {isListening ? (
               <>
-                <MicOff className="w-5 h-5 sm:w-6 sm:h-6 animate-bounce" />
-                <span className="text-[8px] sm:text-[9px] font-extrabold uppercase mt-0.5 tracking-wider">Tinglayapman</span>
+                <MicOff className="w-7 h-7 sm:w-8 sm:h-8 animate-bounce text-black" />
+                <span className="text-[9px] sm:text-[10px] font-black uppercase mt-1 tracking-wider">Tinglayapman</span>
               </>
             ) : (
               <>
-                <Mic className="w-5 h-5 sm:w-6 sm:h-6 text-brand-lime" />
-                <span className="text-[8px] sm:text-[9px] font-bold text-gray-300 mt-0.5 tracking-wider uppercase">Tinglash</span>
+                <Mic className="w-7 h-7 sm:w-8 sm:h-8 text-brand-lime" />
+                <span className="text-[9px] sm:text-[10px] font-bold text-gray-200 mt-1 tracking-wider uppercase">Tinglash</span>
               </>
             )}
           </button>

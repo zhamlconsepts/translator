@@ -8,13 +8,51 @@
  * 4. Qolgan ortiqcha narsalar yo'q!
  */
 
-import { detectLanguage } from './languageDetector.js';
+import { detectLanguage, SUPPORTED_LANGUAGES } from './languageDetector.js';
 import { toPhonetic } from './conversationEngine.js';
 import { dialogueMemory } from './dialogueMemory.js';
 import { translateRussianToUzbek, generateAcquaintanceResponse as nativeBrainFunc } from './nativeBrain.js';
 
+// Standart boshlang'ich gaplar barcha tillar uchun
+export const DEFAULT_PARTNER_SPEECH = {
+  ru: "Давай, не против! А что именно нужно делать?",
+  uz: "Roziman, qani boshlaylik! Nima qilish kerak?",
+  en: "Sounds good, let's test it! What should I do?",
+  tr: "Tamam, neden olmasın! Tam olarak ne yapmamız gerekiyor?"
+};
+
 // INGLIZCHA DIALOG MATRITSI
 const EN_DIALOGUE_MAP = [
+  // 0. OPENER AGREEMENT (Sounds good, let's test it! What should I do?)
+  {
+    matcher: (t) => /sounds good|let's test|what should i do|what to do|sure thing|ready|don't mind|go ahead|let's do it/i.test(t),
+    meaning: "Roziman, qani tekshirib ko'raylik! Nima qilishim kerak?",
+    responses: [
+      {
+        text: "Awesome, thanks! Just chat with me naturally.",
+        meaning: "Ajoyib, rahmat! Shunchaki men bilan tabiiy suhbatlash.",
+        note: "Tushuntirish"
+      },
+      {
+        text: "Nothing complicated at all, just a quick two-minute conversation.",
+        meaning: "Hech qanday murakkab joyi yo'q, 2 daqiqalik qisqa suhbat.",
+        note: "Oddiy javob"
+      },
+      {
+        text: "Great! Tell me a little bit about yourself.",
+        meaning: "Zo'r! O'zing haqingda biroz so'zlab ber.",
+        note: "Tanishuv"
+      }
+    ],
+    jokes: [
+      {
+        text: "As long as you don't quiz me on advanced physics, we're good)",
+        meaning: "Oliy fizikadan savol bermasang bo'ldi, hammasi joyida)",
+        note: "Hazil"
+      }
+    ]
+  },
+
   // 1. City / Where do you live -> FAQAT ANIQ JAVOB!
   {
     matcher: (t) => /which city|what city|where do you live|where are you from|where you from/i.test(t),
@@ -240,6 +278,58 @@ const EN_DIALOGUE_MAP = [
     ]
   },
 
+  // Where are you
+  {
+    matcher: (t) => /where are you|where you at|are you here|are you close/i.test(t),
+    meaning: "Qayerdasan? / Qayerga yetding?",
+    responses: [
+      { text: "Almost there, will be there in five minutes.", meaning: "Yetib keldim, 5 daqiqada boraman.", note: "Aniq vaqt" },
+      { text: "On my way right now.", meaning: "Yo'ldaman, kelyapman.", note: "Harakat" }
+    ],
+    jokes: [
+      { text: "Flying at full speed, don't lose me)", meaning: "Shiddat bilan uchyapman, yo'qotib qo'yma)", note: "Hazil" }
+    ]
+  },
+
+  // What are you doing
+  {
+    matcher: (t) => /what are you doing|what are you up to|what you doing/i.test(t),
+    meaning: "Nima qilyapsan? / Nima bilan bandsan?",
+    responses: [
+      { text: "Just relaxing and chatting with you.", meaning: "Dam olyapman, sen bilan gaplashyapman.", note: "Hozirgi holat" },
+      { text: "Wrapped up some work, now totally free.", meaning: "Ishlarni bitirdim, hozir bemalol bo'shman.", note: "Bo'sh vaqt" }
+    ],
+    jokes: [
+      { text: "Very busy doing nothing at all)", meaning: "Hech narsa qilmaslik bilan juda bandman)", note: "Hazil" }
+    ]
+  },
+
+  // Tired
+  {
+    matcher: (t) => /tired|exhausted|long day|worn out/i.test(t),
+    meaning: "Charchaganlik / Holat",
+    responses: [
+      { text: "Get some good rest today, recharge your batteries.", meaning: "Bugun yaxshilab dam ol, kuch to'pla.", note: "G'amxo'rlik" },
+      { text: "Tough day? Take it easy tonight.", meaning: "Kun og'ir bo'ldimi? O'zingni ehtiyot qil.", note: "Samimiy" }
+    ],
+    jokes: [
+      { text: "Quick, grab some tea and switch to vacation mode)", meaning: "Tezda choy ich va dam olish rejimiga o't)", note: "Hazil" }
+    ]
+  },
+
+  // Wait
+  {
+    matcher: (t) => /wait for me|hold on|give me a minute|one second|wait\b/i.test(t),
+    meaning: "Kutib turishni so'ramoqda",
+    responses: [
+      { text: "Sure, no problem, taking my time waiting for you.", meaning: "Albatta, bemalol, seni kutyapman.", note: "Kutish" },
+      { text: "Take your time, all good.", meaning: "Shoshilma, hammasi joyida.", note: "Xotirjam" }
+    ],
+    jokes: [
+      { text: "Waiting, but the meter is ticking)", meaning: "Kutyapman, ammo hisoblagich ketyapti)", note: "Hazil" }
+    ]
+  },
+
   // 7. Silence / Stalled dialogue -> TINCH BO'LIB QOLGANDA SAVOL TAKLIF QIL!
   {
     matcher: (t) => /^(?:yes|yeah|yep|sure|ok|okay|cool|nice|good|right)[\s.!?,]*$/i.test(t.trim()) || /why are you quiet|why silent|you there/i.test(t),
@@ -273,6 +363,79 @@ const EN_DIALOGUE_MAP = [
 
 // TURKCHA DIALOG MATRITSI
 const TR_DIALOGUE_MAP = [
+  // 0. BAŞLANGIÇ ANLAŞMASI (Tamam, neden olmasın! Tam olarak ne yapmamız gerekiyor?)
+  {
+    matcher: (t) => /tamam|neden olmasın|ne yapmamız gerekiyor|ne yapmam lazım|olur|test edelim|başlayalım|hazırım/i.test(t),
+    meaning: "Mayli, nega bo'lmasin! Aynan nima qilishimiz kerak?",
+    responses: [
+      {
+        text: "Harika, teşekkürler! Benimle her zamanki gibi sohbet et.",
+        meaning: "Ajoyib, rahmat! Men bilan odatdagidek suhbatlash.",
+        note: "Tushuntirish"
+      },
+      {
+        text: "Hiç zor bir şey yok, sadece iki dakika sohbet edeceğiz.",
+        meaning: "Hech qiyin joyi yo'q, shunchaki ikki daqiqa suhbatlashamiz.",
+        note: "Oddiy javob"
+      },
+      {
+        text: "Süper! Kendinden biraz bahseder misin?",
+        meaning: "Super! O'zing haqingda biroz gapirib berasanmi?",
+        note: "Tanishuv"
+      }
+    ],
+    jokes: [
+      {
+        text: "Yüksek matematikten soru sormadığın sürece sorun yok)",
+        meaning: "Oliy matematikadan savol bermasang bo'ldi)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // Neredesin
+  {
+    matcher: (t) => /neredesin|nerdesin|yaklaştın mı|burada mısın/i.test(t),
+    meaning: "Qayerdasan? / Qayerga yetding?",
+    responses: [
+      { text: "Gelmek üzereyim, beş dakikaya oradayım.", meaning: "Kelib qoldim, 5 daqiqada boraman.", note: "Aniq vaqt" },
+      { text: "Yoldayım, hemen geliyorum.", meaning: "Yo'ldaman, hozir boraman.", note: "Harakat" }
+    ],
+    jokes: [{ text: "Işık hızında uçuyorum, kaybetme beni)", meaning: "Shiddat bilan uchyapman, yo'qotib qo'yma)", note: "Hazil" }]
+  },
+
+  // Ne yapıyorsun
+  {
+    matcher: (t) => /ne yapıyorsun|ne ile meşgulsün|ne yapmaktasın/i.test(t),
+    meaning: "Nima qilyapsan? / Nima bilan bandsan?",
+    responses: [
+      { text: "Dinleniyorum, seninle sohbet ediyorum.", meaning: "Dam olyapman, sen bilan gaplashyapman.", note: "Hozirgi holat" },
+      { text: "İşlerimi bitirdim, şimdi tamamen serbestim.", meaning: "Ishlarimni tugatdim, hozir bo'shman.", note: "Bo'sh vaqt" }
+    ],
+    jokes: [{ text: "Hiçbir şey yapmamakla çok meşgulüm)", meaning: "Hech narsa qilmaslik bilan juda bandman)", note: "Hazil" }]
+  },
+
+  // Yorgunluk
+  {
+    matcher: (t) => /yoruldum|çok yorgunum|zor bir gün/i.test(t),
+    meaning: "Charchaganlik / Holat",
+    responses: [
+      { text: "Bugün iyice dinlen, enerjini topla.", meaning: "Bugun yaxshilab dam ol, quvvat to'pla.", note: "G'amxo'rlik" },
+      { text: "Zor bir gün mü geçti? Kendine iyi bak.", meaning: "Qiyin kun o'tdimi? O'zingni ehtiyot qil.", note: "Samimiy" }
+    ],
+    jokes: [{ text: "Hemen sıcak bir çay kap ve tatil moduna geç)", meaning: "Tezda issiq choy ol va dam olish rejimiga o't)", note: "Hazil" }]
+  },
+
+  // Bekle
+  {
+    matcher: (t) => /bekle|bir dakika|bekler misin|acele etme/i.test(t),
+    meaning: "Kutib turishni so'ramoqda",
+    responses: [
+      { text: "Tabii ki, hiç sorun değil, seni bekliyorum.", meaning: "Albatta, muammo yo'q, seni kutyapman.", note: "Kutish" },
+      { text: "Acele etme, her şey yolunda.", meaning: "Shoshilma, hammasi joyida.", note: "Xotirjam" }
+    ],
+    jokes: [{ text: "Bekliyorum ama sayaç işliyor)", meaning: "Kutyapman, ammo hisoblagich ishlayapti)", note: "Hazil" }]
+  },
   {
     matcher: (t) => /merhaba|selam|günaydın|iyi günler/i.test(t),
     meaning: "Salom! / Xayrli kun!",
@@ -426,6 +589,36 @@ const TR_DIALOGUE_MAP = [
 
 // O'ZBEKCHA DIALOG MATRITSI
 const UZ_DIALOGUE_MAP = [
+  // 0. BOSHLANG'ICH GAPGA ROZILIK (Roziman, qani boshlaylik! Nima qilish kerak?)
+  {
+    matcher: (t) => /roziman|boshlaylik|nima qilish kerak|tekshirib ko'raylik|tekshirib|test qilib|qarshi emasman|eshityapman|qani boshlaylik/i.test(t),
+    meaning: "Roziman, qani boshlaylik! Nima qilish kerak?",
+    responses: [
+      {
+        text: "Super, rahmat! Shunchaki men bilan odatdagidek suhbatlashing.",
+        meaning: "Super, rahmat! Shunchaki men bilan odatdagidek suhbatlashing.",
+        note: "Tushuntirish"
+      },
+      {
+        text: "Hech qanday qiyin joyi yo'q, shunchaki ikki daqiqa suhbatlashamiz.",
+        meaning: "Hech qanday qiyin joyi yo'q, shunchaki ikki daqiqa suhbatlashamiz.",
+        note: "Oddiy javob"
+      },
+      {
+        text: "Ajoyib! O'zingiz haqingizda qisqacha aytib bering.",
+        meaning: "Ajoyib! O'zingiz haqingizda qisqacha aytib bering.",
+        note: "Tanishuv"
+      }
+    ],
+    jokes: [
+      {
+        text: "Asosiysi oliy matematikadan savol bermasangiz bo'lgani)",
+        meaning: "Asosiysi oliy matematikadan savol bermasangiz bo'lgani)",
+        note: "Hazil"
+      }
+    ]
+  },
+
   // 1. Salomlashish va hol-ahvol
   {
     matcher: (t) => /salom|assalomu alaykum|qalaysiz|qalesiz|qalesan|yaxshimisiz|yaxshimisan|tuzukmisiz/i.test(t),
@@ -476,6 +669,31 @@ const UZ_DIALOGUE_MAP = [
     ]
   },
 
+  // 2.1 Hozir qayerdasan? (Qayerdasan hozir? / Qattasan?)
+  {
+    matcher: (t) => /qayerdasan|qayerdasiz|qattasan|qattasiz|qaerdasiz|qayerda yuribsiz|qayerdasan hozir/i.test(t),
+    meaning: "Hozir qayerdaligingiz haqida so'ramoqda",
+    responses: [
+      {
+        text: "Kelib qoldim, 5 daqiqada yetib boraman.",
+        meaning: "Kelib qoldim, 5 daqiqada yetib boraman.",
+        note: "Aniq vaqt"
+      },
+      {
+        text: "Uydaman, o'z ishlarim bilan bandman.",
+        meaning: "Uydaman, o'z ishlarim bilan bandman.",
+        note: "Lokatsiya"
+      }
+    ],
+    jokes: [
+      {
+        text: "Shiddat bilan uchyapman, yo'qotib qo'ymang)",
+        meaning: "Shiddat bilan uchyapman, yo'qotib qo'ymang)",
+        note: "Hazil"
+      }
+    ]
+  },
+
   // 3. Kim / Ism / Tanishuv
   {
     matcher: (t) => /ismingiz nima|isming nima|tanishaylik|kimsan|kimsiz|otim|isming/i.test(t),
@@ -503,7 +721,7 @@ const UZ_DIALOGUE_MAP = [
 
   // 4. Mashg'ulot / Ish / Kasb
   {
-    matcher: (t) => /nima ish qilasiz|nima ish qilasan|kasbingiz nima|kasbing nima|nima bilan bandsiz|nima bilan bandsan|nima qilyapsan|nima qilyapsiz/i.test(t),
+    matcher: (t) => /nima ish qilasiz|nima ish qilasan|kasbingiz nima|kasbing nima|nima bilan bandsiz|nima bilan bandsan/i.test(t),
     meaning: "Kasbingiz nima? / Nima ish qilasiz?",
     responses: [
       {
@@ -522,6 +740,106 @@ const UZ_DIALOGUE_MAP = [
         text: "(soha)daman — asosan qahvani natijalarga aylantiraman)",
         meaning: "(soha)daman — asosan qahvani natijalarga aylantiraman)",
         note: "Ish hazili"
+      }
+    ]
+  },
+
+  // 4.1 Nima qilyapsan? (Hozirgi holat)
+  {
+    matcher: (t) => /nima qilyapsan|nima qilyapsiz|nma qvos|nma qilyapsan|nima qivosiz/i.test(t),
+    meaning: "Hozir nima qilayotganingiz haqida so'ramoqda",
+    responses: [
+      {
+        text: "Dam olyapman, sen bilan suhbatlashyapman.",
+        meaning: "Dam olyapman, sen bilan suhbatlashyapman.",
+        note: "Hozirgi holat"
+      },
+      {
+        text: "Biroz ishlarim bor edi, hozirgina bo'shadim.",
+        meaning: "Biroz ishlarim bor edi, hozirgina bo'shadim.",
+        note: "Bo'sh vaqt"
+      }
+    ],
+    jokes: [
+      {
+        text: "Juda muhim ish bilan bandman — dam olyapman)",
+        meaning: "Juda muhim ish bilan bandman — dam olyapman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.2 Charchash (Charchadim / Og'ir kun)
+  {
+    matcher: (t) => /charchadim|charchab|ogir kun|og'ir kun|holdan toydim|charchaganman/i.test(t),
+    meaning: "Charchaganlik holati",
+    responses: [
+      {
+        text: "Yaxshilab dam oling, o'zingizni ehtiyot qiling.",
+        meaning: "Yaxshilab dam oling, o'zingizni ehtiyot qiling.",
+        note: "G'amxo'rlik"
+      },
+      {
+        text: "Kun og'ir o'tdimi? Charchoqni chiqarib, yaxshilab uxlab oling.",
+        meaning: "Kun og'ir o'tdimi? Yaxshilab uxlab oling.",
+        note: "Samimiy"
+      }
+    ],
+    jokes: [
+      {
+        text: "Tezda issiq choy ichib, to'liq dam olish rejimiga o'ting)",
+        meaning: "Tezda issiq choy ichib, dam olish rejimiga o'ting)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.3 Zerikish (Zerikdim)
+  {
+    matcher: (t) => /zerikdim|zerikib|nima qilsak ekan|zerikarli/i.test(t),
+    meaning: "Zerikkanlik holati",
+    responses: [
+      {
+        text: "Unda keling suhbatlashamiz yoki qiziq biror narsa o'ylab topamiz)",
+        meaning: "Unda keling suhbatlashamiz)",
+        note: "Muloqot"
+      },
+      {
+        text: "Zerikishni tarqatish kerak! Birga kofe ichsak nima deysiz?",
+        meaning: "Birga kofe ichsak nima deysiz?",
+        note: "Taklif"
+      }
+    ],
+    jokes: [
+      {
+        text: "Faqat mendek ajoyib suhbatdoshi bo'lmaganlar zerikadi)",
+        meaning: "Mendek suhbatdoshi yo'qlar zerikadi)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.4 Kutib turish (Kutib tur / Kuting)
+  {
+    matcher: (t) => /kutib tur|kuting|kutib turing|bir daqiqa|shoshilma|kutasanmi/i.test(t),
+    meaning: "Kutib turishni so'ramoqda",
+    responses: [
+      {
+        text: "Albatta, muammo yo'q, kutib turaman.",
+        meaning: "Albatta, muammo yo'q, kutib turaman.",
+        note: "Kutish"
+      },
+      {
+        text: "Kelishdik, shoshilmasdan kelavering.",
+        meaning: "Kelishdik, shoshilmasdan kelavering.",
+        note: "Xotirjam"
+      }
+    ],
+    jokes: [
+      {
+        text: "Kutyapman, ammo vaqt hisoblagichi ketyapti)",
+        meaning: "Kutyapman, ammo vaqt hisoblagichi ketyapti)",
+        note: "Hazil"
       }
     ]
   },
@@ -674,12 +992,17 @@ export function translateAnyToUzbek(text, langCode = 'ru') {
 
   // Agar o'zbekcha bo'lsa
   if (langCode === 'uz') {
+    const lower = clean.toLowerCase();
+    if (/roziman|boshlaylik|nima qilish kerak|tekshirib|qarshi emasman/i.test(lower)) {
+      return "Roziman, qani boshlaylik! Nima qilish kerak?";
+    }
     return clean;
   }
 
   // Agar inglizcha bo'lsa
   if (langCode === 'en') {
     const lower = clean.toLowerCase();
+    if (/sounds good|let's test|what should i do|what to do|sure thing|ready|don't mind/i.test(lower)) return "Roziman, qani tekshirib ko'raylik! Nima qilishim kerak?";
     if (/which city|where are you from|where do you live/i.test(lower)) return "Qaysi shahardansiz? / Qayerda yashaysiz?";
     if (/what do you do|what are you doing/i.test(lower)) return "Nima ish bilan shug'ullanasiz? / Nima qilyapsiz?";
     if (/how are you|how is it going/i.test(lower)) return "Ishlaringiz qalay? / Ahvolingiz qanday?";
@@ -687,6 +1010,9 @@ export function translateAnyToUzbek(text, langCode = 'ru') {
     if (/what's new|what is new/i.test(lower)) return "Nima yangiliklar bor?";
     if (/single|married|boyfriend|girlfriend/i.test(lower)) return "Uylanganmisiz? / Sevgilingiz bormi?";
     if (/coffee|hang out|meet up|walk/i.test(lower)) return "Kofe ichamizmi? / Aylanamizmi?";
+    if (/where are you|where you at/i.test(lower)) return "Qayerdasiz? / Yetib keldingizmi?";
+    if (/tired|exhausted/i.test(lower)) return "Charchadim / Og'ir kun bo'ldi";
+    if (/wait for me|hold on|one minute/i.test(lower)) return "Kutib turing / Bir daqiqa";
     if (/beautiful|handsome|cute|pretty|look great/i.test(lower)) return "Juda chiroylisiz / Ajoyib ko'rinyapsiz (Kompliment)";
     if (/idiot|stupid|shut up|get lost|loser/i.test(lower)) return "Sizga nisbatan qo'pollik / baxs qilinmoqda";
     if (/hello|hi|hey/i.test(lower)) return "Salom! / Assalomu alaykum!";
@@ -700,11 +1026,15 @@ export function translateAnyToUzbek(text, langCode = 'ru') {
   // Agar turkcha bo'lsa
   if (langCode === 'tr') {
     const lower = clean.toLowerCase();
+    if (/tamam|neden olmasın|ne yapmamız gerekiyor|ne yapmam lazım|olur|test edelim/i.test(lower)) return "Mayli, nega bo'lmasin! Aynan nima qilishimiz kerak?";
     if (/merhaba|selam/i.test(lower)) return "Salom! / Assalomu alaykum!";
     if (/nasılsın|nasıl gidiyor/i.test(lower)) return "Ishlaringiz qalay? / Ahvolingiz qanday?";
     if (/nerelisin/i.test(lower)) return "Qaysi shahardansiz? / Qayerdansiz?";
     if (/ne iş yapıyorsun|ne yapıyorsun/i.test(lower)) return "Kasbingiz nima? / Nima ish qilasiz?";
     if (/kahve/i.test(lower)) return "Kofe ichamizmi?";
+    if (/neredesin|nerdesin/i.test(lower)) return "Qayerdasiz? / Shu yerdamisiz?";
+    if (/yoruldum/i.test(lower)) return "Charchadim";
+    if (/bekle|bir dakika/i.test(lower)) return "Kutib turing";
     if (/güzel|harika/i.test(lower)) return "Juda chiroylisiz (Kompliment)";
     if (/aptal|salak|kes sesini/i.test(lower)) return "Sizga nisbatan qo'pollik qilinmoqda";
     return `Suhbatdosh (Turkcha): "${clean}"`;
@@ -725,29 +1055,33 @@ export function translateAnyToUzbek(text, langCode = 'ru') {
 /**
  * Universal ko'p tilli va tarixiy ong generatori
  */
-export function generateMultilingualResponse(input, selectedIndex = 0, isJokeRequested = false) {
+export function generateMultilingualResponse(input, selectedIndex = 0, isJokeRequested = false, forcedLangCode = null) {
+  const effectiveLangCode = forcedLangCode || 'ru';
+
   if (!input || !input.trim()) {
-    return {
-      partnerText: "Привет!",
-      partnerMeaning: "Salom! / Assalomu alaykum!",
-      detectedLanguage: { code: 'ru', name: 'Rus tili', flag: '🇷🇺' },
-      userResponse: "Привет!",
-      userMeaning: "Salom!",
-      userPronunciation: "[Privet!]",
-      userNote: "Oddiy salom",
-      isJoke: false,
-      allVariants: [
-        { text: "Привет!", meaning: "Salom!", note: "Oddiy salom" },
-        { text: "Салют, рад слышать!", meaning: "Salom, eshitganimdan xursandman!", note: "Jonli so'zlashuv" }
-      ],
-      currentVariantIndex: 0,
-      totalVariants: 2,
-      stepCount: 1
-    };
+    const defaultSpeech = DEFAULT_PARTNER_SPEECH[effectiveLangCode] || DEFAULT_PARTNER_SPEECH.ru;
+    return generateMultilingualResponse(defaultSpeech, selectedIndex, isJokeRequested, effectiveLangCode);
   }
 
   const clean = input.trim();
-  const detectedLang = detectLanguage(clean);
+  let detectedLang = detectLanguage(clean);
+
+  // Agar foydalanuvchi yuqorida aniq tilni tanlagan bo'lsa (forcedLangCode):
+  // Begona yozuv (masalan kirill yoki arabcha) bo'lmasa, tanlangan tilga ustunlik beramiz!
+  if (forcedLangCode) {
+    const isCyrillic = /[а-яё]/i.test(clean);
+    const isArabic = /[\u0600-\u06FF]/.test(clean);
+    if (!isArabic) {
+      if (forcedLangCode === 'ru' && isCyrillic) {
+        const found = SUPPORTED_LANGUAGES.find(l => l.code === 'ru');
+        if (found) detectedLang = found;
+      } else if (forcedLangCode !== 'ru' && !isCyrillic) {
+        const found = SUPPORTED_LANGUAGES.find(l => l.code === forcedLangCode);
+        if (found) detectedLang = found;
+      }
+    }
+  }
+
   const langCode = detectedLang.code;
   const partnerMeaning = translateAnyToUzbek(clean, langCode);
 
@@ -798,41 +1132,155 @@ export function generateMultilingualResponse(input, selectedIndex = 0, isJokeReq
     };
   }
 
-  // Agar chet tilida matched bo'lmasa, chet tili uchun mantiqiy aniq javob
+  // Agar chet tilida yoki o'zbekchada maxsus matcher bo'lmasa, mantiqiy to'g'ri javob berish
   if (!matched) {
     if (langCode === 'en') {
-      matched = {
-        meaning: partnerMeaning,
-        responses: [
-          { text: "Got it, sounds reasonable.", meaning: "Tushundim, mantiqli.", note: "Rozilik" },
-          { text: "I agree with that.", meaning: "Bunga qo'shilaman.", note: "Qo'shilish" }
-        ],
-        jokes: [
-          { text: "Sounds solid, I won't even argue)", meaning: "Salobatli eshitildi, bahslashmayman ham)", note: "Hazil" }
-        ]
-      };
+      if (clean.includes('?')) {
+        if (/where/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Somewhere nearby, around the city.", meaning: "Shahar hududida, yaqin atrofda.", note: "Location" },
+              { text: "At home right now, taking care of some things.", meaning: "Hozir uydaman, yumushlar bilan bandman.", note: "Home" }
+            ],
+            jokes: [{ text: "Wherever there's good coffee and WiFi)", meaning: "Qayerda yaxshi kofe va WiFi bo'lsa o'sha yerda)", note: "Joke" }]
+          };
+        } else if (/when|what time/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Soon, as soon as I finish up here.", meaning: "Tez orada, ishlarim tugashi bilan.", note: "Time" },
+              { text: "Let's catch up a bit later to confirm.", meaning: "Birozdan keyin aniqlashtirib olamiz.", note: "Time" }
+            ],
+            jokes: [{ text: "Right on time, not a minute late)", meaning: "Aynan vaqtida, kechikmay)", note: "Joke" }]
+          };
+        } else if (/why/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "There are reasons, but overall everything is for the best.", meaning: "Sabablari bor, ammo hammasi yaxshilikka.", note: "Reason" }
+            ],
+            jokes: [{ text: "Because life without a little mystery would be boring)", meaning: "Chunki sirsiz hayot zerikarli bo'lardi)", note: "Joke" }]
+          };
+        } else {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "I think that makes a lot of sense.", meaning: "Menimcha, bu juda mantiqli.", note: "Reasoning" },
+              { text: "It really depends, but generally I agree.", meaning: "Vaziyatga bog'liq, ammo umuman qo'shilaman.", note: "Agreement" }
+            ],
+            jokes: [{ text: "Great question, could debate that all day)", meaning: "Ajoyib savol)", note: "Joke" }]
+          };
+        }
+      } else {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "I hear you, totally agree with your point.", meaning: "Seni tushunaman, fikringga to'liq qo'shilaman.", note: "Understanding" },
+            { text: "Sounds fair enough, I'm with you.", meaning: "Adolatli, fikringizga qo'shilaman.", note: "Agreement" }
+          ],
+          jokes: [{ text: "Sounds solid, no argument there)", meaning: "Gap yo'q)", note: "Joke" }]
+        };
+      }
     } else if (langCode === 'tr') {
-      matched = {
-        meaning: partnerMeaning,
-        responses: [
-          { text: "Anladım, gayet mantıklı.", meaning: "Tushundim, mantiqli.", note: "Rozilik" },
-          { text: "Sana katılıyorum.", meaning: "Senga qo'shilaman.", note: "Qo'shilish" }
-        ],
-        jokes: [
-          { text: "Kulağa harika geliyor, itiraz etmem)", meaning: "Ajoyib eshitildi, e'tiroz bildirmayman)", note: "Hazil" }
-        ]
-      };
+      if (clean.includes('?')) {
+        if (/nerede|nereye/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Şehir merkezine yakınım, buralardayım.", meaning: "Shahar markaziga yaqinman, shu atrofdaman.", note: "Konum" },
+              { text: "Şu an evdeyim, biraz dinleniyorum.", meaning: "Hozir uydaman, biroz dam olyapman.", note: "Ev" }
+            ],
+            jokes: [{ text: "İyi bir kahve neredeyse oradayım)", meaning: "Yaxshi qahva qayerda bo'lsa o'sha yerda)", note: "Şaka" }]
+          };
+        } else if (/ne zaman|saat kaçta/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "En kısa sürede, işlerimi toparlar toparlamaz.", meaning: "Eng qisqa fursatda, ishlarimni tugatishim bilan.", note: "Zaman" }
+            ],
+            jokes: [{ text: "Tam zamanında, bir dakika bile gecikmeden)", meaning: "Aynan vaqtida)", note: "Şaka" }]
+          };
+        } else {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Bence gayet mantıklı bir düşünce.", meaning: "Menimcha juda mantiqli fikr.", note: "Mantık" },
+              { text: "Duruma göre değişir ama genel olarak katılıyorum.", meaning: "Vaziyatga bog'liq, ammo qo'shilaman.", note: "Katılım" }
+            ],
+            jokes: [{ text: "Güzel soru, üzerine uzun uzun konuşulur)", meaning: "Ajoyib savol)", note: "Şaka" }]
+          };
+        }
+      } else {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "Seni çok iyi anlıyorum, tamamen katılıyorum.", meaning: "Seni juda yaxshi tushunyapman, to'liq qo'shilaman.", note: "Anlayış" },
+            { text: "Gayet haklısın, aynı fikirdeyim.", meaning: "Mutlaqo haqsiz, bir xil fikrdamiz.", note: "Onay" }
+          ],
+          jokes: [{ text: "Kulağa harika geliyor, itiraz etmem)", meaning: "E'tiroz bildirmayman)", note: "Şaka" }]
+        };
+      }
     } else {
-      matched = {
-        meaning: partnerMeaning,
-        responses: [
-          { text: "Tushundim, mantiqli.", meaning: "Tushundim, mantiqli.", note: "Rozilik" },
-          { text: "Sizga qo'shilaman.", meaning: "Sizga qo'shilaman.", note: "Qo'shilish" }
-        ],
-        jokes: [
-          { text: "Gap yo'q, bahslashmayman ham)", meaning: "Bahslashmayman ham)", note: "Hazil" }
-        ]
-      };
+      // O'zbek tili
+      if (clean.includes('?')) {
+        if (/qayerda|qayerga|qayoqqa|qayerdasan|qattasan/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Shu yaqin atrofdaman, shahar ichidaman.", meaning: "Shu yaqin atrofdaman, shahar ichidaman.", note: "Joylashuv" },
+              { text: "Uydaman, ozgina ishlarimni qilib o'tiribman.", meaning: "Uydaman, ozgina ishlarimni qilib o'tiribman.", note: "Joy" }
+            ],
+            jokes: [{ text: "Qayerda yaxshi qahva va Wi-Fi bo'lsa o'sha yerdaman)", meaning: "Wi-Fi bor joydaman)", note: "Hazil" }]
+          };
+        } else if (/qachon|soat nechada|qaysi payt/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Tez orada, ishlarim tugashi bilanoq.", meaning: "Tez orada, ishlarim tugashi bilanoq.", note: "Vaqt" },
+              { text: "Birozdan keyin aniqroq gaplashsak bo'ladi.", meaning: "Birozdan keyin aniqroq gaplashamiz.", note: "Kelishtirish" }
+            ],
+            jokes: [{ text: "Aynan vaqtida, bir daqiqa ham kechikmay)", meaning: "Kechikmay)", note: "Hazil" }]
+          };
+        } else if (/nega|nimaga|nima sababdan|nima uchun/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "O'ziga yarasha sabablari bor, ammo hammasi yaxshilikka.", meaning: "Sabablari bor, ammo hammasi yaxshilikka.", note: "Sabab" },
+              { text: "Vaziyat shunday bo'lib qoldi, asosiysi natija yaxshi bo'lsin.", meaning: "Vaziyat shunday bo'ldi.", note: "Xulosa" }
+            ],
+            jokes: [{ text: "Chunki sirsiz hayot zerikarli bo'lib qolardi)", meaning: "Sirsiz hayot zerikarli bo'lardi)", note: "Hazil" }]
+          };
+        } else if (/nima|nima gap/i.test(clean)) {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Hammasi tinchlik va osoyishtalik, o'zingizda nima yangiliklar?", meaning: "Hammasi tinchlik, o'zingizda nima yangiliklar?", note: "Holat" },
+              { text: "Hammasi joyida, odatdagidek ishlar bilan bandmiz.", meaning: "Hammasi joyida.", note: "Oddiy" }
+            ],
+            jokes: [{ text: "Kompaniya siri, faqat shaxsan ko'rishganda aytaman)", meaning: "Faqat ko'rishganda aytaman)", note: "Hazil" }]
+          };
+        } else {
+          matched = {
+            meaning: partnerMeaning,
+            responses: [
+              { text: "Menimcha, bu gapingizda juda katta mantiq bor.", meaning: "Bunda katta mantiq bor.", note: "Mantiqiy javob" },
+              { text: "Vaziyatga qarab o'zgaradi, lekin umuman olganda qo'shilaman.", meaning: "Umuman olganda qo'shilaman.", note: "Qo'shilish" }
+            ],
+            jokes: [{ text: "Ajoyib savol, bu mavzuda rosa uzoq bahslashsa bo'ladi)", meaning: "Bu mavzuda uzoq bahslashsa bo'ladi)", note: "Hazil" }]
+          };
+        }
+      } else {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "Sizni juda yaxshi tushundim, fikringizga to'liq qo'shilaman.", meaning: "Fikringizga to'liq qo'shilaman.", note: "Rozilik" },
+            { text: "Juda to'g'ri aytdingiz, men ham xuddi shunday o'ylayman.", meaning: "Men ham xuddi shunday o'ylayman.", note: "Qo'shilish" },
+            { text: "Qiziq va to'g'ri fikr bo'ldi.", meaning: "Qiziq va to'g'ri fikr bo'ldi.", note: "Ma'qullash" }
+          ],
+          jokes: [{ text: "Gap yo'q, bunga hatto bahslashib ham bo'lmaydi)", meaning: "Bahslashib ham bo'lmaydi)", note: "Hazil" }]
+        };
+      }
     }
   }
 

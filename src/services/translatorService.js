@@ -48,11 +48,14 @@ const TYPO_MAP = {
   // Hol-ahvol
   "qalesan": "qalaysan", "qales": "qalaysan", "qalsan": "qalaysan", "qale": "qalaysan",
   "qalysz": "qalaysiz", "qalesz": "qalaysiz", "qandysz": "qalaysiz", "yaxshmsz": "yaxshimisiz",
+  "yaxshman": "yaxshiman", "yaxshmiz": "yaxshimiz",
   "nmagap": "nima gap", "nma gap": "nima gap", "nmagapla": "nima gap",
+  "nma qvos": "nima qilyapsan", "nma qilyapsan": "nima qilyapsan", "nima qvos": "nima qilyapsan",
   // Kofe / Aylanish
   "kofi": "kofe", "kafe": "kofe", "qahva": "kofe", "qaxva": "kofe", "kove": "kofe", "cofee": "kofe",
   "ichamz": "ichamiz", "ichmiz": "ichamiz", "ichilu": "ichaylik", "ichsak": "ichsak",
-  "boramz": "boramiz", "bormiz": "boramiz", "ketdik": "boramiz", "ketik": "boramiz", "ketu": "boramiz",
+  "boramz": "boramiz", "bormz": "boramiz", "bormiz": "boramiz", "borilu": "boramiz",
+  "ketdik": "ketdik", "ketik": "ketdik", "ketu": "ketdik", "kettik": "ketdik",
   "keln": "keling", "kelin": "keling", "yur": "keling", "yuring": "keling",
   "aylanamz": "aylanamiz", "aylanilu": "aylanaylik", "aylangani": "aylanishga",
   // Maqtov / Kompliment
@@ -68,16 +71,18 @@ const TYPO_MAP = {
   "toshkenda": "toshkentda", "toshkan": "toshkent", "toshkentda": "toshkentda", "tashkent": "toshkent",
   "yashiman": "yashayman", "turaman": "yashayman", "turamz": "yashaymiz",
   // Rozilik / Tasdiq
-  "kelshdik": "kelishdik", "kelshdikmi": "kelishdik", "bopti": "kelishdik", "bo'pti": "kelishdik",
+  "kelshdik": "kelishdik", "kelshdk": "kelishdik", "kelshdikmi": "kelishdik", "bopti": "kelishdik", "bo'pti": "kelishdik",
   "mayli": "kelishdik", "roziman": "roziman", "boldi": "bo'ldi",
   // Rahmat
   "raxmat": "rahmat", "rhmat": "rahmat", "ramat": "rahmat", "kotta": "katta", "kottakon": "katta",
   // Tanishuv
   "tanishli": "tanishaylik", "tanishayli": "tanishaylik", "tanishsek": "tanishaylik", "ismim": "ismim",
   // Boshqalar
-  "nma": "nima", "nmaga": "nega", "qatta": "qayerda", "qattasan": "qayerdasan",
+  "nma": "nima", "nmaga": "nega", "qatta": "qayerda", "qattasan": "qayerdasan", "qattasn": "qayerdasan", "qattasiz": "qayerdasiz",
   "uylanganmsan": "uylanganmisan", "uylanganman": "uylanganman", "uylangan": "uylangan",
-  "zerikdm": "zerikdim", "ovqatlanamz": "ovqatlanamiz", "choy": "choy"
+  "zerikdm": "zerikdim", "charchadm": "charchadim", "charcadim": "charchadim",
+  "kutb": "kutib", "kutb tur": "kutib tur",
+  "ovqatlanamz": "ovqatlanamiz", "choy": "choy"
 };
 
 // Matndagi xatoliklarni aniqlab to'g'rilash (Spell Normalizer)
@@ -152,7 +157,8 @@ const INTENT_DATABASE = [
   // 2. KOFE / CHOY / AYLANI SH TAKLIFI
   {
     id: "coffee_walk",
-    keywords: ["kofe", "choy", "aylanamiz", "aylanaylik", "ichamiz", "boramiz", "keling", "uchrashamiz", "qahvaxona"],
+    phrases: ["kofe ichamiz", "kofe ichaylik", "choy ichamiz", "aylanishga boramiz", "kofe ichsak nima deysiz", "qahva ichamiz"],
+    keywords: ["kofe", "choy", "qahva", "kafe", "aylanamiz", "aylanaylik", "qahvaxona"],
     meaning: "Kofe ichish yoki birga aylanish taklifi",
     ru: {
       text: "Давай выпьем кофе и приятно пообщаемся?",
@@ -191,6 +197,52 @@ const INTENT_DATABASE = [
         { text: "Biroz aylanib, tamaddi qilib kelsak nima deysiz?", note: "Aylanish taklifi" }
       ],
       joke: { text: "Kofe mendan, ajoyib kayfiyat sizdan)", note: "Hazil" }
+    }
+  },
+
+  // 2.1 KELISHDIK, BORAMIZ / KETDIK
+  {
+    id: "agreement_go",
+    phrases: ["kelishdik boramiz", "kelishdik ketdik", "boramiz kelishdik", "kettik", "boramiz", "ketdik", "kelishdik kettik", "boldi boramiz", "mayli boramiz", "tayyorman ketdik"],
+    keywords: ["boramiz", "ketdik", "kettik"],
+    meaning: "Kelishdik, boramiz / kettik deb tasdiqlash",
+    ru: {
+      text: "Договорились, пойдем!",
+      meaning: "Kelishdik, boramiz!",
+      variants: [
+        { text: "Договорились, пойдем!", note: "Aniq rozilik" },
+        { text: "Отлично, выдвигаемся!", note: "Harakatga tayyor" },
+        { text: "По рукам, поехали!", note: "Jonli so'zlashuv" }
+      ],
+      joke: { text: "По рукам, теперь уже точно не отвертишься)", note: "Hazil" }
+    },
+    en: {
+      text: "Deal, let's go!",
+      meaning: "Kelishdik, kettik!",
+      variants: [
+        { text: "Deal, let's go!", note: "Enthusiastic" },
+        { text: "All set, let's head out!", note: "Ready" },
+        { text: "Agreed, count me in!", note: "Agreement" }
+      ],
+      joke: { text: "Deal, no backing out now)", note: "Joke" }
+    },
+    tr: {
+      text: "Anlaştık, gidelim!",
+      meaning: "Kelishdik, ketdik!",
+      variants: [
+        { text: "Anlaştık, gidelim!", note: "Onay" },
+        { text: "Tamamdır, çıkalım!", note: "Hazır" }
+      ],
+      joke: { text: "Anlaştık, artık geri adım atmak yok)", note: "Şaka" }
+    },
+    uz: {
+      text: "Kelishdik, kettik!",
+      meaning: "Kelishdik, kettik!",
+      variants: [
+        { text: "Kelishdik, kettik!", note: "Aniq" },
+        { text: "Bo'ldi, boramiz!", note: "Rozilik" }
+      ],
+      joke: { text: "Kelishdik, endi orqaga qaytish yo'q)", note: "Hazil" }
     }
   },
 

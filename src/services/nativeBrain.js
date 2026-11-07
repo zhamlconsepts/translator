@@ -369,6 +369,261 @@ const CONTINUITY_DIALOGUE_MAP = [
     ]
   },
 
+  // 4.1 NIMA QILYAPSAN? (Что делаешь? / Чем занят?) -> FAQAT ANIQ JAVOB!
+  {
+    matcher: (t) => /что.*?(?:ты|вы|сейчас)?.*?(?:делаешь|делаете|поделываешь)|че делаешь|чем занят|чем занята/i.test(t),
+    meaning: "Nima qilyapsan? / Nima bilan bandsan?",
+    responses: [
+      {
+        text: "Отдыхаю, общаюсь с тобой.",
+        meaning: "Dam olyapman, sen bilan suhbatlashyapman.",
+        note: "Hozirgi holat"
+      },
+      {
+        text: "Да ничем особенным, появилось свободное время.",
+        meaning: "Alohida hech narsa bilan emas, bo'sh vaqt bo'lib qoldi.",
+        note: "Bo'sh vaqt"
+      },
+      {
+        text: "Делами занимался, сейчас как раз освободился.",
+        meaning: "Ishlarim bor edi, hozirgina bo'shadim.",
+        note: "Bandlik"
+      }
+    ],
+    jokes: [
+      {
+        text: "Занимаюсь очень важным делом — отдыхаю от всех дел)",
+        meaning: "Juda muhim ish bilan bandsan — barcha ishlardan dam olyapman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.2 CHARCHASH (Я устал / устала / тяжелый день)
+  {
+    matcher: (t) => /устал|устала|устали|тяжелый день|сил нет|вымотался|вымоталась/i.test(t),
+    meaning: "Charchaganlik / Holat haqida aytmoqda",
+    responses: [
+      {
+        text: "Отдохни хорошенько сегодня, наберись сил.",
+        meaning: "Bugun yaxshilab dam ol, kuch to'pla.",
+        note: "G'amxo'rlik"
+      },
+      {
+        text: "Тяжелый день выдался? Береги себя, не перегружайся.",
+        meaning: "Kun og'ir bo'ldimi? O'zingni ehtiyot qil, ko'p zo'riqma.",
+        note: "Samimiy"
+      }
+    ],
+    jokes: [
+      {
+        text: "Срочно выпей вкусного чая и включай режим полного релакса)",
+        meaning: "Tezda mazali choy ich va to'liq dam olish rejimiga o't)",
+        note: "Iliq hazil"
+      }
+    ]
+  },
+
+  // 4.3 ZERIKISH (Мне скучно / скучаю)
+  {
+    matcher: (t) => /скучно|скучаю|нечем заняться|тоска/i.test(t),
+    meaning: "Zerikkanlik / Biror mashg'ulot qidirmoqda",
+    responses: [
+      {
+        text: "Тогда давай пообщаемся или придумаем что-то интересное)",
+        meaning: "Unda kel suhbatlashamiz yoki qiziq biror narsa o'ylab topamiz)",
+        note: "Muloqot"
+      },
+      {
+        text: "Скуку надо разгонять! Как насчет прогулки?",
+        meaning: "Zerikishni tarqatish kerak! Aylansak nima deysan?",
+        note: "Taklif"
+      }
+    ],
+    jokes: [
+      {
+        text: "Скучно бывает только тем, у кого нет интересных собеседников вроде меня)",
+        meaning: "Faqat mendek qiziqarli suhbatdoshi bo'lmaganlar zerikadi)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.4 KUTIB TURISH (Подожди / Жди)
+  {
+    matcher: (t) => /подожди|жди|минутку|секунду|один момент|погоди/i.test(t),
+    meaning: "Kutib turishni so'ramoqda",
+    responses: [
+      {
+        text: "Да, конечно, без проблем, я жду тебя.",
+        meaning: "Ha, albatta, muammo yo'q, seni kutyapman.",
+        note: "Kutish"
+      },
+      {
+        text: "Договорились, не торопись, всё в порядке.",
+        meaning: "Kelishdik, shoshilma, hammasi joyida.",
+        note: "Xotirjam"
+      }
+    ],
+    jokes: [
+      {
+        text: "Жду, но счетчик времени уже тикает)",
+        meaning: "Kutyapman, ammo vaqt hisoblagichi ketyapti)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.5 RAD ETISH (Не хочу / Не буду)
+  {
+    matcher: (t) => /не хочу|не буду|не надо|не стоит/i.test(t),
+    meaning: "Rad etish / Istamaslik",
+    responses: [
+      {
+        text: "Хорошо, без проблем. Как скажешь.",
+        meaning: "Yaxshi, muammo yo'q. Qanday desang shunday.",
+        note: "Hurmat"
+      },
+      {
+        text: "Понял тебя, настаивать не буду.",
+        meaning: "Tushundim seni, majburlamayman.",
+        note: "Vazmin"
+      }
+    ],
+    jokes: [
+      {
+        text: "Твое право, спорить не буду)",
+        meaning: "O'z huquqing, bahslashmayman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.6 NARX VA QIYMAT (Сколько стоит? / Почем?)
+  {
+    matcher: (t) => /сколько.*?стоит|какая цена|почем|цена/i.test(t),
+    meaning: "Narx va qiymat haqida so'ramoqda",
+    responses: [
+      {
+        text: "Точно не подскажу, надо уточнить цену на месте.",
+        meaning: "Aniq ayta olmayman, narxini joyida aniqlash kerak.",
+        note: "Aniq javob"
+      },
+      {
+        text: "Зависит от места и условий, везде по-разному.",
+        meaning: "Joy va sharoitga bog'liq, hamma joyda har xil.",
+        note: "Izoh"
+      }
+    ],
+    jokes: [
+      {
+        text: "Главное, чтобы не дороже хорошего настроения)",
+        meaning: "Asosiysi yaxshi kayfiyatdan qimmat bo'lmasa bo'ldi)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.7 TUSHUNISH VA ESHITISH (Ты меня понимаешь? / Слышишь?)
+  {
+    matcher: (t) => /понимаешь|слышишь|меня слышно|ты понял|ты поняла/i.test(t),
+    meaning: "Tushunyapsanmi yoki eshityapsanmi deb so'ramoqda",
+    responses: [
+      {
+        text: "Да, конечно, отлично тебя слышу и понимаю.",
+        meaning: "Ha, albatta, seni juda yaxshi eshityapman va tushunyapman.",
+        note: "Tasdiq"
+      },
+      {
+        text: "Всё предельно ясно, я внимательно слушаю.",
+        meaning: "Hammasi tushunarli, diqqat bilan eshityapman.",
+        note: "Diqqat"
+      }
+    ],
+    jokes: [
+      {
+        text: "Слышу каждое слово, ловлю на лету)",
+        meaning: "Har bir so'zingni eshityapman, havoda ilib olyapman)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.8 ROZILIK SO'RASH (Ты согласен? / Правда ведь?)
+  {
+    matcher: (t) => /согласен|согласна|правда ведь|так ведь|верно/i.test(t),
+    meaning: "Rozilik yoki fikr tasdig'ini so'ramoqda",
+    responses: [
+      {
+        text: "Да, полностью согласен с твоими словами.",
+        meaning: "Ha, so'zlaringga to'liq qo'shilaman.",
+        note: "To'liq rozilik"
+      },
+      {
+        text: "В этом плане ты определенно прав(а).",
+        meaning: "Bu borada sen shubhasiz haqsanksan.",
+        note: "Fikr ma'qullash"
+      }
+    ],
+    jokes: [
+      {
+        text: "Тут даже спорить бессмысленно, факт)",
+        meaning: "Bu yerda bahslashish ham ma'nosiz, aniq fakt)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.9 NEGA? (Почему ты так думаешь? / С чего вдруг?)
+  {
+    matcher: (t) => /почему.*?так думаешь|с чего|почему ты так/i.test(t),
+    meaning: "Nega bunday o'ylayotganing sababini so'ramoqda",
+    responses: [
+      {
+        text: "Просто исхожу из личного опыта и логики.",
+        meaning: "Shunchaki shaxsiy tajriba va mantiqdan kelib chiqyapman.",
+        note: "Mantiqiy javob"
+      },
+      {
+        text: "Мне кажется, это самый разумный вывод.",
+        meaning: "Menimcha, bu eng oqilona xulosa.",
+        note: "Xulosa"
+      }
+    ],
+    jokes: [
+      {
+        text: "Интуиция подсказывает, а она редко ошибается)",
+        meaning: "Ichki sezgim aytmoqda, u esa kamdan-kam adashadi)",
+        note: "Hazil"
+      }
+    ]
+  },
+
+  // 4.10 KINO VA FILM TAKLIFI (Пошли в кино? / Посмотрим фильм?)
+  {
+    matcher: (t) => /кино|фильм|сериал|в кино/i.test(t) && /пошли|пойдем|сходим|посмотрим|глянем/i.test(t),
+    meaning: "Kino yoki film ko'rish taklifi",
+    responses: [
+      {
+        text: "Давай, отличная идея! На какой фильм сходим?",
+        meaning: "Ketdik, ajoyib fikr! Qaysi filmga boramiz?",
+        note: "Kino taklifi"
+      },
+      {
+        text: "Я только за! Когда и во сколько?",
+        meaning: "Men faqat roziman! Qachon va soat nechada?",
+        note: "Vaqt kelishish"
+      }
+    ],
+    jokes: [
+      {
+        text: "Главное, чтобы попкорн был вкусный, а фильм не скучный)",
+        meaning: "Asosiysi popkorni mazali, filmi esa zerikarli bo'lmasin)",
+        note: "Kino hazili"
+      }
+    ]
+  },
+
   // 5. KIM / ISM / TANISHUV (Ты кто? / Кто ты? / Как тебя зовут?) -> FAQAT ANIQ JAVOB!
   {
     matcher: (t) => /(?:ты кто|кто ты|вы кто|кто вы|кто это|кто ты такой|кто ты такая)/i.test(t) || /как.*?(?:тебя|вас)?.*?зовут|твое.*?имя|ваше.*?имя|познакомимся|познакомиться|давай познакомимся/i.test(t),
@@ -953,24 +1208,70 @@ export function generateAcquaintanceResponse(input, selectedIndex = 0, isJokeReq
 
   if (!matched) {
     if (clean.includes('?')) {
-      // Har qanday noma'lum savolga mantiqiy, ishonchli va tabiiy javoblar (HECH QANDAY '(ответ)' YO'Q!)
-      matched = {
-        meaning: partnerMeaning,
-        responses: [
-          { text: "Думаю, да, вполне.", meaning: "Menimcha shunday, to'liq.", note: "Aniq javob" },
-          { text: "Всё зависит от ситуации, но в целом да.", meaning: "Vaziyatga bog'liq, lekin umuman olganda ha.", note: "Mantiqiy javob" },
-          { text: "Честно говоря, пока сложно сказать однозначно.", meaning: "Rostini aytsam, hozircha bir narsa deyish qiyin.", note: "Xulosa" }
-        ],
-        jokes: [
-          { text: "Вопрос отличный, на такую тему можно долго рассуждать)", meaning: "Ajoyib savol, bu mavzuda uzoq bahslashsa bo'ladi)", note: "Hazil" }
-        ]
-      };
+      // Savol turlariga qarab mantiqiy javoblar
+      if (/где|куда|откуда/i.test(clean)) {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "В пределах города, недалеко отсюда.", meaning: "Shahar hududida, bu yerdan uzoq emas.", note: "Joylashuv" },
+            { text: "Где-то поблизости, сейчас сориентируюсь.", meaning: "Yaqin atrofda, hozir mo'ljal olaman.", note: "Yaqin" }
+          ],
+          jokes: [
+            { text: "Там, где есть хороший интернет и уютная атмосфера)", meaning: "Yaxshi internet va shinam muhit bor joyda)", note: "Hazil" }
+          ]
+        };
+      } else if (/когда|во сколько|в какое время/i.test(clean)) {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "В ближайшее время, как только освобожусь.", meaning: "Yaqin vaqtda, bo'shashim bilanoq.", note: "Vaqt" },
+            { text: "Давай чуть позже свяжемся и уточним.", meaning: "Birozdan keyin aloqaga chiqib aniqlashtiramiz.", note: "Kelishtirish" }
+          ],
+          jokes: [
+            { text: "Точно вовремя, ни минутой позже)", meaning: "Aynan vaqtida, bir daqiqa ham kechikmay)", note: "Hazil" }
+          ]
+        };
+      } else if (/почему|зачем|для чего/i.test(clean)) {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "На то есть свои причины, но в целом всё к лучшему.", meaning: "O'ziga yarasha sabablari bor, ammo hammasi yaxshilikka.", note: "Sabab" },
+            { text: "Так сложились обстоятельства, главное — результат.", meaning: "Vaziyat shunday bo'ldi, asosiysi natija.", note: "Xulosa" }
+          ],
+          jokes: [
+            { text: "Потому что жизнь без интриги была бы скучной)", meaning: "Chunki qiziqishsiz hayot zerikarli bo'lardi)", note: "Hazil" }
+          ]
+        };
+      } else if (/что|че /i.test(clean)) {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "Сложно выделить что-то одно, но всё идёт отлично.", meaning: "Aynan bittasini aytish qiyin, ammo hammasi a'lo ketyapti.", note: "Javob" },
+            { text: "Всё в порядке, ничего необычного.", meaning: "Hammasi joyida, g'ayritabiiy hech narsa yo'q.", note: "Oddiy" }
+          ],
+          jokes: [
+            { text: "Секрет фирмы, расскажу только при личной встрече)", meaning: "Kompaniya siri, faqat shaxsan uchrashganda aytaman)", note: "Hazil" }
+          ]
+        };
+      } else {
+        matched = {
+          meaning: partnerMeaning,
+          responses: [
+            { text: "Думаю, в этом есть определенная логика.", meaning: "Menimcha, bunda o'ziga yarasha mantiq bor.", note: "Mantiqiy javob" },
+            { text: "Всё зависит от ситуации, но в целом согласен.", meaning: "Vaziyatga bog'liq, ammo umuman olganda qo'shilaman.", note: "Qo'shilish" }
+          ],
+          jokes: [
+            { text: "Вопрос отличный, на такую тему можно долго рассуждать)", meaning: "Ajoyib savol, bu mavzuda uzoq bahslashsa bo'ladi)", note: "Hazil" }
+          ]
+        };
+      }
     } else {
       matched = {
         meaning: partnerMeaning,
         responses: [
-          { text: "Понял тебя, звучит разумно.", meaning: "Tushundim seni, mantiqli.", note: "Rozilik" },
-          { text: "Полностью согласен с тобой.", meaning: "Senga to'liq qo'shilaman.", note: "Qo'shilish" }
+          { text: "Понимаю тебя, полностью разделяю твою мысль.", meaning: "Seni tushunaman, fikringga to'liq qo'shilaman.", note: "Rozilik" },
+          { text: "Звучит справедливо, согласен с тобой.", meaning: "Adolatli eshitildi, senga qo'shilaman.", note: "Qo'shilish" },
+          { text: "Интересная мысль, звучит очень логично.", meaning: "Qiziq fikr, juda mantiqli eshitildi.", note: "Ma'qullash" }
         ],
         jokes: [
           { text: "Звучит солидно, даже спорить не буду)", meaning: "Salobatli eshitildi, bahslashmayman ham)", note: "Hazil" }
